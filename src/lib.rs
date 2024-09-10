@@ -7,6 +7,10 @@ pub mod core {
     pub mod sequence;
 }
 
+pub mod iso {
+    pub mod iso3166;
+}
+
 pub mod macros {
     pub mod approx;
 }
@@ -18,3 +22,5 @@ pub mod math {
 pub mod resources {
     pub mod load;
 }
+
+pub mod errors;
