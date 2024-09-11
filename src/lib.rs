@@ -20,7 +20,7 @@ pub mod math {
 }
 
 pub mod resources {
-    pub mod load;
+    pub mod holiday_loader;
 }
 
 pub mod errors;
