@@ -1,8 +1,27 @@
 use std::str::FromStr;
 
-use crate::errors;
-
 // ISO 3166:2020
+
+#[derive(Debug)]
+pub enum Error {
+    CountryCodeTwoParseError(String),
+    CountryCodeThreeParseError(String),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CountryCodeTwoParseError(err) => {
+                write!(f, "Failed to parse {} as CountryCodeTwo.", err)
+            }
+            Self::CountryCodeThreeParseError(err) => {
+                write!(f, "Failed to parse {} as CountryCode.Three", err)
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
 
 #[derive(Debug, Default)]
 pub enum CountryTwoCode {
@@ -619,7 +638,7 @@ impl From<CountryThreeCode> for CountryTwoCode {
 }
 
 impl FromStr for CountryTwoCode {
-    type Err = errors::CountryCodeParsing;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -822,13 +841,13 @@ impl FromStr for CountryTwoCode {
             "YE" => Ok(Self::YE),
             "ZM" => Ok(Self::ZM),
             "ZW" => Ok(Self::ZW),
-            _ => Err(errors::CountryCodeParsing(s.to_string())),
+            _ => Err(Error::CountryCodeTwoParseError(s.to_string())),
         }
     }
 }
 
 impl FromStr for CountryThreeCode {
-    type Err = errors::CountryCodeParsing;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -1032,7 +1051,7 @@ impl FromStr for CountryThreeCode {
             "YEM" => Ok(Self::YEM),
             "ZMB" => Ok(Self::ZMB),
             "ZWE" => Ok(Self::ZWE),
-            _ => Err(errors::CountryCodeParsing(s.to_string())),
+            _ => Err(Error::CountryCodeThreeParseError(s.to_string())),
         }
     }
 }
