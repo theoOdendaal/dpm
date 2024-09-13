@@ -11,10 +11,7 @@ type Result<T> = std::result::Result<T, Error>;
 // https://date.nager.at/swagger/index.html
 
 // FIXME refactor this code to make it more concise and understandable.
-// TODO implement custom errors.
-// TODO replace all .unwraps with proper error propogation.
-// FIXME don't use Box<dyn Error>, as this defines behaviour at runtime.
-// Imple the From trait for all Error's raised by other crates utilized.
+// TODO create a config file, thats stores all available country codes and periods.
 
 pub const BASE_URL: &str = "https://date.nager.at/api/v3";
 pub const HOLIDAY_LIST: [&str; 2] = ["US", "ZA"];
@@ -26,13 +23,10 @@ pub enum Error {
     UnknownCountryCode,
     PeriodNotAvailable,
     UnanticipatedError,
-    IOError(String),
-    WriteError(String),
-    FetchError(String),
-    ResponseError(String),
-    ParseError(String),
-    ReadError(String),
-    DateParseError(String),
+    IOError(std::io::Error),
+    FetchError(reqwest::Error),
+    ParseError(serde_json::Error),
+    DateParseError(chrono::format::ParseError),
 }
 
 impl std::fmt::Display for Error {
@@ -42,12 +36,9 @@ impl std::fmt::Display for Error {
             Self::PeriodNotAvailable => write!(f, "The requested period is not available."),
             Self::UnanticipatedError => write!(f, "An unknown error occurred."),
             Self::IOError(err) => write!(f, "{}", err),
-            Self::WriteError(err) => write!(f, "Unable to write file for country code: {}.", err),
-            Self::FetchError(err) => write!(f, "Unable to fetch data for country code: {}.", err),
-            Self::ResponseError(err) => write!(f, "{}.", err),
-            Self::ParseError(err) => write!(f, "Unable to parse data for country code: {}.", err),
-            Self::ReadError(err) => write!(f, "Unable to read file for country code: {}.", err),
-            Self::DateParseError(err) => write!(f, "Failed to parse date from string: {}.", err),
+            Self::FetchError(err) => write!(f, "{}", err),
+            Self::ParseError(err) => write!(f, "{}", err),
+            Self::DateParseError(err) => write!(f, "{}", err),
         }
     }
 }
@@ -56,14 +47,25 @@ impl std::error::Error for Error {}
 
 impl From<reqwest::Error> for Error {
     fn from(value: reqwest::Error) -> Self {
-        Self::FetchError(value.to_string())
+        Self::FetchError(value)
     }
 }
 
-// FIXME refactor this code. Make it more concise.
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
-        Self::IOError(value.to_string())
+        Self::IOError(value)
+    }
+}
+
+impl From<chrono::format::ParseError> for Error {
+    fn from(value: chrono::format::ParseError) -> Self {
+        Self::DateParseError(value)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        Self::ParseError(value)
     }
 }
 
@@ -82,7 +84,7 @@ pub fn fetch_url(client: &Client, url: &str) -> Result<String> {
 fn write_to_file(path: &str, text: Vec<String>) -> Result<()> {
     let mut file = File::create(path)?;
     for line in text.clone() {
-        writeln!(file, "{}", line).map_err(|_| Error::WriteError(path.into()))?;
+        writeln!(file, "{}", line)?;
     }
     Ok(())
 }
@@ -102,28 +104,19 @@ struct AvailableCountries {
 
 //  --- Functionality ---
 
-pub fn fetch_public_holidays(
-    client: &Client,
-    country_code: &str,
-    period: &str,
-) -> Result<Vec<String>> {
+fn fetch_public_holidays(client: &Client, country_code: &str, period: &str) -> Result<Vec<String>> {
     let url = &format!("{}/PublicHolidays/{}/{}", BASE_URL, period, country_code);
 
-    // FIXME match on the status code returned.
-    let response_text =
-        fetch_url(client, url).map_err(|_| Error::FetchError(country_code.into()))?;
+    let response_text = fetch_url(client, url)?;
 
-    let public_holidays: Vec<PublicHoliday> =
-        serde_json::from_str(&response_text).map_err(|_| Error::ParseError(country_code.into()))?;
+    let public_holidays: Vec<PublicHoliday> = serde_json::from_str(&response_text)?;
     Ok(public_holidays.into_iter().map(|h| h.date).collect())
 }
 
-pub fn fetch_available_countries(client: &Client) -> Result<HashSet<String>> {
+fn fetch_available_countries(client: &Client) -> Result<HashSet<String>> {
     let url = format!("{}/AvailableCountries", BASE_URL);
-    let response_text =
-        fetch_url(client, &url).map_err(|_| Error::FetchError("All available".into()))?;
-    let available_countries: Vec<AvailableCountries> = serde_json::from_str(&response_text)
-        .map_err(|_| Error::ParseError("All available".into()))?;
+    let response_text = fetch_url(client, &url)?;
+    let available_countries: Vec<AvailableCountries> = serde_json::from_str(&response_text)?;
 
     Ok(available_countries
         .into_iter()
@@ -142,21 +135,16 @@ pub fn write_public_holidays(
             collection.extend(text);
         }
     }
-    write_to_file(&format!("{}/{}.txt", HOLIDAY_DIR, country_code), collection)
-        .map_err(|_| Error::WriteError(country_code.into()))?;
+    write_to_file(&format!("{}/{}.txt", HOLIDAY_DIR, country_code), collection)?;
 
     Ok(())
 }
 
 pub fn load_country_calendar(country_code: &str) -> Result<HashSet<NaiveDate>> {
-    let contents = fs::read_to_string(format!("{}/{}.txt", HOLIDAY_DIR, country_code))
-        .map_err(|_| Error::ParseError(country_code.into()))?;
+    let contents = fs::read_to_string(format!("{}/{}.txt", HOLIDAY_DIR, country_code))?;
     let lines: HashSet<NaiveDate> = contents
         .lines()
-        .map(|line| {
-            NaiveDate::parse_from_str(line, "%Y-%m-%d")
-                .map_err(|_| Error::DateParseError(line.into()))
-        })
+        .map(|line| NaiveDate::parse_from_str(line, "%Y-%m-%d").map_err(Error::DateParseError))
         .collect::<Result<HashSet<NaiveDate>>>()?;
 
     Ok(lines)
@@ -181,7 +169,7 @@ pub fn load_saved_holidays_population() -> HashSet<String> {
 
 pub fn update_holidays() -> Result<()> {
     let client = Client::new();
-    let period = 1990..=2025;
+    let period = 2020..=2025;
     for country in HOLIDAY_LIST {
         println!("Extracting: {:?}", country);
         write_public_holidays(&client, period.clone(), country)?;

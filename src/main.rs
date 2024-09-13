@@ -8,7 +8,6 @@ use dpm::core::sequence::Sequence;
 use dpm::iso::iso3166::CountryTwoCode;
 */
 use dpm::resources::holiday_loader;
-use reqwest::blocking::Client;
 
 // TODO Implement a logger for the holiday_loader module.
 fn main() {
@@ -20,15 +19,7 @@ fn main() {
     //    Err(e) => println!("{}", e),
     //}
 
-    let year = "2023";
-    let country = "ZZ";
-    let url = format!(
-        "{}/PublicHolidays/{}/{}",
-        holiday_loader::BASE_URL,
-        year,
-        country
-    );
-    let res = holiday_loader::fetch_url(&Client::new(), &url);
+    let res = holiday_loader::update_holidays();
     println!("{:?}", res);
 
     //println!("{:?}", holiday_loader::load_saved_holidays_population());
