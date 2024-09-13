@@ -1,8 +1,8 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::Write;
 
@@ -82,6 +82,11 @@ pub fn fetch_url(client: &Client, url: &str) -> Result<String> {
 }
 
 fn write_to_file(path: &str, text: Vec<String>) -> Result<()> {
+    let path = std::path::Path::new(path);
+    if !std::path::Path::new(path).exists() {
+        std::fs::create_dir_all(path.parent().unwrap())?;
+    }
+
     let mut file = File::create(path)?;
     for line in text.clone() {
         writeln!(file, "{}", line)?;
@@ -140,7 +145,7 @@ pub fn write_public_holidays(
     Ok(())
 }
 
-pub fn load_country_calendar(country_code: &str) -> Result<HashSet<NaiveDate>> {
+pub fn read_country_calendar(country_code: &str) -> Result<HashSet<NaiveDate>> {
     let contents = fs::read_to_string(format!("{}/{}.txt", HOLIDAY_DIR, country_code))?;
     let lines: HashSet<NaiveDate> = contents
         .lines()
@@ -150,7 +155,7 @@ pub fn load_country_calendar(country_code: &str) -> Result<HashSet<NaiveDate>> {
     Ok(lines)
 }
 
-pub fn load_saved_holidays_population() -> HashSet<String> {
+pub fn read_saved_holidays_population() -> HashSet<String> {
     let mut txt_files = HashSet::new();
 
     if let Ok(entries) = fs::read_dir(HOLIDAY_DIR) {
@@ -187,4 +192,50 @@ pub fn update_with_all_available_holidays() -> Result<()> {
         }
     }
     Ok(())
+}
+
+//  --- config ---
+// TODO, all data written to txt should go through this struct.
+// FIXME Data written should be appended and not overwritten.
+#[derive(Clone, Debug)]
+pub struct HolidayLoader(HashMap<String, HashSet<i32>>);
+
+impl HolidayLoader {
+    pub fn new() -> Self {
+        let mut values = HashMap::new();
+        let countries = read_saved_holidays_population();
+        for country in countries.into_iter() {
+            if let Ok(calendar) = read_country_calendar(&country) {
+                let calendar: HashSet<i32> = calendar.iter().map(|x| x.year()).collect();
+                values.insert(country, calendar);
+            }
+        }
+        Self(values)
+    }
+
+    pub fn is_available(&self, country: &str, period: i32) -> bool {
+        if let Some(dates) = self.0.get(country) {
+            dates.contains(&period)
+        } else {
+            false
+        }
+    }
+
+    pub fn load_if_not_available(
+        &mut self,
+        country: &str,
+        period: i32,
+    ) -> Result<HashSet<NaiveDate>> {
+        if !self.is_available(country, period) {
+            write_public_holidays(&Client::new(), (period as u32)..=(period as u32), country)?;
+            *self = Self::new();
+        }
+        read_country_calendar(country)
+    }
+}
+
+impl Default for HolidayLoader {
+    fn default() -> Self {
+        Self::new()
+    }
 }

@@ -12,21 +12,17 @@ use dpm::resources::holiday_loader;
 // TODO Implement a logger for the holiday_loader module.
 fn main() {
     // Holiday loader.
-    //holiday_loader::write_public_holidays(2023..=2025, "US");
-    //let res = holiday_loader::fetch_public_holidays(&Client::new(), "AAP", "2023");
-    //match res {
-    //    Ok(data) => println!("{:?}", data),
-    //    Err(e) => println!("{}", e),
-    //}
 
-    let res = holiday_loader::update_holidays();
+    //let _res = holiday_loader::write_public_holidays(&Client::new(), 2022..=2024, "US");
+
+    let mut res = holiday_loader::HolidayLoader::new();
+    println!("{:?}", &res);
+
+    println!("{:?}", holiday_loader::read_saved_holidays_population());
+    let period = 2019;
+    let test = &mut res.load_if_not_available("ZA", period);
+    println!("{:?}", test);
     println!("{:?}", res);
-
-    //println!("{:?}", holiday_loader::load_saved_holidays_population());
-
-    //holiday_loader::update_holidays();
-    //println!("{:?}", holiday_loader::load_country_calendar("ZA"));
-
     // Date range
     /*
     let country_code = CountryTwoCode::from_str("ZA");
