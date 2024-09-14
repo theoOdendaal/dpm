@@ -33,6 +33,7 @@ fn main() {
 
     println!("{:?}", seq_res);
 
+    /*
     let seq_frac: Vec<f64> = seq_res
         .iter()
         .skip(1)
@@ -41,4 +42,5 @@ fn main() {
         .collect();
 
     println!("{:?}", seq_frac);
+    */
 }

@@ -1,6 +1,6 @@
-// Day count conventions.
-
 use chrono::NaiveDate;
+
+/// Day count conventions.
 
 pub enum DayCountConventions {
     Thirty360Bond,
@@ -19,15 +19,18 @@ impl Default for DayCountConventions {
     }
 }
 
-impl DayCountConventions {
-    pub fn day_count(&self, d1: &NaiveDate, d2: &NaiveDate) -> f64 {
+impl<A, B> DayCountConventions
+where
+    A: DayCount<A, B>,
+{
+    fn day_count(&self, d1: A, d2: A) -> B {
         match self {
             Self::Thirty360Bond => unimplemented!(),
             Self::ThirtyE360 => unimplemented!(),
             Self::ThirtyE360ISDA => unimplemented!(),
             Self::ThirtyEPlus360 => unimplemented!(),
-            Self::Actual360 => Actual360::year_fraction(d1, d2),
-            Self::Actual365Fixed => Actual365Fixed::year_fraction(d1, d2),
+            Self::Actual360 => Actual360::day_count(d1, d2),
+            Self::Actual365Fixed => Actual365Fixed::day_count(d1, d2),
             Self::Actual365Actual => unimplemented!(),
             Self::NonLeap365 => unimplemented!(),
         }
@@ -36,9 +39,29 @@ impl DayCountConventions {
 
 //  --- Traits ---
 
-// Call using [NaiveDate].day_count(Actual365Fixed).
-pub trait YearFraction<A> {
-    fn year_fraction(d1: A, d2: A) -> f64;
+pub trait DayCount<A, B> {
+    fn day_count(d1: A, d2: A) -> B;
+
+    fn year_fraction(d1: A, d2: A) -> B;
+}
+
+impl<T, B> DayCount<Vec<T>, Vec<B>> for Vec<T>
+where
+    T: DayCount<T, B> + Copy,
+{
+    fn day_count(d1: Vec<T>, d2: Vec<T>) -> Vec<B> {
+        d1.iter()
+            .zip(d2.iter())
+            .map(|(a, b)| T::day_count(*a, *b))
+            .collect()
+    }
+
+    fn year_fraction(d1: Vec<T>, d2: Vec<T>) -> Vec<B> {
+        d1.iter()
+            .zip(d2.iter())
+            .map(|(a, b)| T::year_fraction(*a, *b))
+            .collect()
+    }
 }
 
 //  --- Structs ---
@@ -53,14 +76,22 @@ struct Actual365Fixed;
 
 //  --- Trait implementations ---
 
-impl YearFraction<&NaiveDate> for Actual360 {
-    fn year_fraction(d1: &NaiveDate, d2: &NaiveDate) -> f64 {
-        (*d2 - *d1).num_days() as f64 / 360.0
+impl DayCount<NaiveDate, f64> for Actual360 {
+    fn day_count(d1: NaiveDate, d2: NaiveDate) -> f64 {
+        (d2 - d1).num_days() as f64
+    }
+
+    fn year_fraction(d1: NaiveDate, d2: NaiveDate) -> f64 {
+        Self::day_count(d1, d2) / 360.0
     }
 }
 
-impl YearFraction<&NaiveDate> for Actual365Fixed {
-    fn year_fraction(d1: &NaiveDate, d2: &NaiveDate) -> f64 {
-        (*d2 - *d1).num_days() as f64 / 365.0
+impl DayCount<NaiveDate, f64> for Actual365Fixed {
+    fn day_count(d1: NaiveDate, d2: NaiveDate) -> f64 {
+        (d2 - d1).num_days() as f64
+    }
+
+    fn year_fraction(d1: NaiveDate, d2: NaiveDate) -> f64 {
+        Self::day_count(d1, d2) / 365.0
     }
 }
