@@ -31,16 +31,10 @@ fn main() {
 
     let seq_res = NaiveDate::seq(start, end, step).business_day(&bdc, &holidays);
 
+    let first = seq_res.clone();
+    let second = seq_res.clone().into_iter().skip(1).collect();
+    let seq_frac = dcc.year_fraction(&first, &second);
+
     println!("{:?}", seq_res);
-
-    /*
-    let seq_frac: Vec<f64> = seq_res
-        .iter()
-        .skip(1)
-        .zip(seq_res.iter())
-        .map(|(a, b)| dcc.day_count(b, a))
-        .collect();
-
     println!("{:?}", seq_frac);
-    */
 }
