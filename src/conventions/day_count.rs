@@ -2,6 +2,8 @@ use chrono::{Datelike, NaiveDate};
 
 /// Day count conventions.
 
+// TODO refactor
+
 pub enum DayCountConventions {
     Thirty360Bond,
     ThirtyE360,
@@ -34,9 +36,21 @@ impl DayCountConventions {
     }
 }
 
+pub trait YearFraction {
+    fn year_fraction(&self, convention: &DayCountConventions) -> Vec<f64>;
+}
+
+impl YearFraction for &Vec<NaiveDate> {
+    fn year_fraction(&self, convention: &DayCountConventions) -> Vec<f64> {
+        let first = *self;
+        let second = &self.iter().skip(1).copied().collect();
+        convention.year_fraction(first, second)
+    }
+}
+
 //  --- Traits ---
 
-pub trait DayCount<A, B> {
+trait DayCount<A, B> {
     fn day_count(date1: A, date2: A) -> B;
 
     fn year_fraction(date1: A, date2: A) -> B;
