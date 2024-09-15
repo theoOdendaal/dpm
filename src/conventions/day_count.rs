@@ -22,7 +22,11 @@ impl Default for DayCountConventions {
 }
 
 impl DayCountConventions {
-    pub fn year_fraction(&self, date1: &Vec<NaiveDate>, date2: &Vec<NaiveDate>) -> Vec<f64> {
+    pub fn discrete_year_fraction(
+        &self,
+        date1: &Vec<NaiveDate>,
+        date2: &Vec<NaiveDate>,
+    ) -> Vec<f64> {
         match self {
             Self::Thirty360Bond => Thirty360Bond::year_fraction(date1, date2),
             Self::ThirtyE360 => ThirtyE360::year_fraction(date1, date2),
@@ -34,17 +38,11 @@ impl DayCountConventions {
             Self::NonLeap365 => unimplemented!(),
         }
     }
-}
 
-pub trait YearFraction {
-    fn year_fraction(&self, convention: &DayCountConventions) -> Vec<f64>;
-}
-
-impl YearFraction for &Vec<NaiveDate> {
-    fn year_fraction(&self, convention: &DayCountConventions) -> Vec<f64> {
-        let first = *self;
-        let second = &self.iter().skip(1).copied().collect();
-        convention.year_fraction(first, second)
+    pub fn year_fraction(&self, sequence: &Vec<NaiveDate>) -> Vec<f64> {
+        let first = sequence;
+        let second = &sequence.iter().skip(1).copied().collect();
+        self.discrete_year_fraction(first, second)
     }
 }
 

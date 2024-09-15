@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::{Months, NaiveDate};
 
 use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
-use dpm::conventions::day_count::{DayCountConventions, YearFraction};
+use dpm::conventions::day_count::DayCountConventions;
 use dpm::core::sequence::Sequence;
 use dpm::iso::iso3166::CountryTwoCode;
 
@@ -29,7 +29,7 @@ fn main() {
     let holidays = holiday_loader::read_country_calendar(&country_code.to_string()).unwrap();
 
     let seq_res = NaiveDate::seq(start, end, step).business_day(&bdc, &holidays);
-    let seq_frac = (&seq_res).year_fraction(&dcc);
+    let seq_frac = dcc.year_fraction(&seq_res);
 
     println!("{:?}", seq_res);
     println!("{:?}", seq_frac);
