@@ -1,3 +1,4 @@
+/*
 use std::str::FromStr;
 
 use chrono::{Months, NaiveDate};
@@ -6,11 +7,24 @@ use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::DayCountConventions;
 use dpm::core::sequence::Sequence;
 use dpm::iso::iso3166::CountryTwoCode;
-
 use dpm::resources::holiday_loader;
+*/
+
+use dpm::resources::holidays;
 
 // TODO Implement a logger for the holiday_loader module.
 fn main() {
+    let builder = holidays::PublicHolidayRequestBuilder::new()
+        .country_codes(&["ZA", "US"])
+        .periods(&[2021, 2024]);
+
+    let client = builder.build();
+    println!("{:?}", &client);
+    let res = client.fetch().unwrap();
+    println!("{:?}", res);
+
+    /*
+
     let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
     let step = Months::new(2);
@@ -33,4 +47,5 @@ fn main() {
 
     println!("{:?}", seq_res);
     println!("{:?}", seq_frac);
+    */
 }

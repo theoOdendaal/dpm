@@ -1,3 +1,4 @@
+//  --- Modules ---
 pub mod conventions {
     pub mod business_day;
     pub mod day_count;
@@ -21,4 +22,5 @@ pub mod math {
 
 pub mod resources {
     pub mod holiday_loader;
+    pub mod holidays;
 }
