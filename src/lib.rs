@@ -21,6 +21,5 @@ pub mod math {
 }
 
 pub mod resources {
-    pub mod holiday_loader;
     pub mod holidays;
 }

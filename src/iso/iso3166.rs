@@ -15,7 +15,7 @@ impl std::fmt::Display for Error {
                 write!(f, "Failed to parse {} as CountryCodeTwo.", err)
             }
             Self::CountryCodeThreeParseError(err) => {
-                write!(f, "Failed to parse {} as CountryCode.Three", err)
+                write!(f, "Failed to parse {} as CountryCodeThree", err)
             }
         }
     }
@@ -1053,6 +1053,18 @@ impl FromStr for CountryThreeCode {
             "ZWE" => Ok(Self::ZWE),
             _ => Err(Error::CountryCodeThreeParseError(s.to_string())),
         }
+    }
+}
+
+impl From<CountryTwoCode> for String {
+    fn from(value: CountryTwoCode) -> Self {
+        value.to_string()
+    }
+}
+
+impl From<CountryThreeCode> for String {
+    fn from(value: CountryThreeCode) -> Self {
+        value.to_string()
     }
 }
 

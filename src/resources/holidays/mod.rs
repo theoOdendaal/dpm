@@ -6,9 +6,61 @@ use std::fs;
 use std::io::Write;
 use std::{fmt::Debug, fs::File};
 
+// https://date.nager.at/swagger/index.html
+
+// Refactor to make it more concise.
+
 //  --- Constants ---
 const BASE_URL: &str = "https://date.nager.at/api/v3";
 const RESOURCE_DIR: &str = "src/resources/holidays";
+
+//  --- Custom types ---
+#[derive(Debug)]
+pub struct HolidayCalendar(HashMap<String, HashSet<NaiveDate>>);
+//type HolidayCalendar = HashMap<String, HashSet<NaiveDate>>;
+
+//  --- Errors ---
+type Result<T> = std::result::Result<T, Error>;
+
+// TODO create more specific variants.
+#[derive(Debug)]
+pub enum Error {
+    Static(String),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Static(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<reqwest::Error> for Error {
+    fn from(value: reqwest::Error) -> Self {
+        Self::Static(value.to_string())
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::Static(value.to_string())
+    }
+}
+
+impl From<chrono::ParseError> for Error {
+    fn from(value: chrono::format::ParseError) -> Self {
+        Self::Static(value.to_string())
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        Self::Static(value.to_string())
+    }
+}
 
 //  --- Structs ---
 
@@ -29,6 +81,8 @@ pub struct NoPeriods;
 #[derive(Default, Clone)]
 pub struct Periods(HashSet<u32>);
 
+//  --- Serialization structs ---
+
 #[derive(Default, Clone)]
 pub struct PublicHolidayRequestBuilder<C, P> {
     country_codes: C,
@@ -38,12 +92,6 @@ pub struct PublicHolidayRequestBuilder<C, P> {
 #[derive(Deserialize, Debug)]
 pub struct PublicHoliday {
     date: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AvailableCountries {
-    country_code: String,
 }
 
 //  --- Implementations ---
@@ -94,40 +142,58 @@ impl PublicHolidayRequestBuilder<CountryCodes, Periods> {
 }
 
 impl PublicHolidayRequest {
-    pub fn fetch(self) -> Result<HashMap<String, Vec<String>>, reqwest::Error> {
-        let mut holidays: HashMap<String, Vec<String>> = HashMap::new();
+    pub fn fetch(&self) -> Result<HolidayCalendar> {
+        let mut holidays: HashMap<String, HashSet<NaiveDate>> = HashMap::new();
 
-        for (cc, url) in self.identifiers.into_iter().zip(self.urls.iter()) {
+        for (cc, url) in self.identifiers.iter().zip(self.urls.iter()) {
             let fetched_holidays = fetch_url(&self.client, url)?;
-            let parsed_holidays = into_public_holidays(fetched_holidays).unwrap();
+
+            let json_text: Vec<PublicHoliday> = serde_json::from_str(&fetched_holidays)?;
+
+            let date_holidays: HashSet<String> = json_text.into_iter().map(|d| d.date).collect();
+
+            let parsed_holidays = into_date(date_holidays)?;
+
             holidays
-                .entry(cc)
+                .entry(cc.to_string())
                 .and_modify(|dates| dates.extend(parsed_holidays.clone()))
                 .or_insert(parsed_holidays);
         }
-        Ok(holidays)
+        Ok(holidays.into())
+    }
+}
+
+impl HolidayCalendar {
+    pub fn save(&self) -> Result<Self> {
+        for (k, v) in self.0.iter() {
+            write_to_file(k, v)?;
+        }
+        Ok(Self(self.0.clone()))
+    }
+}
+
+impl From<HashMap<String, HashSet<NaiveDate>>> for HolidayCalendar {
+    fn from(value: HashMap<String, HashSet<NaiveDate>>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<HolidayCalendar> for HashMap<String, HashSet<NaiveDate>> {
+    fn from(value: HolidayCalendar) -> Self {
+        value.0
     }
 }
 
 //  --- Utility ---
 
-// TODO match on status codes.
-fn fetch_url(client: &Client, url: &str) -> Result<String, reqwest::Error> {
-    client.get(url).send()?.text()
+fn fetch_url(client: &Client, url: &str) -> Result<String> {
+    // TODO match on status codes.
+    Ok(client.get(url).send()?.text()?)
 }
 
 //  --- Functionality ---
 
-fn into_public_holidays(text: String) -> Result<Vec<String>, serde_json::Error> {
-    let json_text: Vec<PublicHoliday> = serde_json::from_str(&text)?;
-    Ok(json_text.iter().map(|d| d.date.clone()).collect())
-}
-
-fn into_available_countries(text: String) -> Result<HashSet<String>, serde_json::Error> {
-    serde_json::from_str(&text)
-}
-
-fn write_to_file<T>(file_name: &str, collection: Vec<T>) -> Result<(), std::io::Error>
+fn write_to_file<T>(file_name: &str, collection: &HashSet<T>) -> Result<()>
 where
     T: Debug,
 {
@@ -139,9 +205,23 @@ where
     Ok(())
 }
 
-fn load_public_holidays(country_code: &str) -> Result<HashSet<String>, std::io::Error> {
+pub fn load_holidays(country_code: &str) -> Result<HashSet<NaiveDate>> {
     let path = format!("{}/{}.txt", RESOURCE_DIR, country_code);
     let contents = fs::read_to_string(path)?;
-    let lines: HashSet<String> = contents.lines().map(|d| d.to_string()).collect();
-    Ok(lines)
+    parse_to_collection(contents)
+}
+
+fn into_date(holidays: HashSet<String>) -> Result<HashSet<NaiveDate>> {
+    holidays
+        .into_iter()
+        .map(|d| {
+            NaiveDate::parse_from_str(&d, "%Y-%m-%d")
+                .map_err(|e| Error::Static(format!("Failed to parse date: {}", e)))
+        })
+        .collect::<Result<HashSet<NaiveDate>>>()
+}
+
+pub fn parse_to_collection(countries: String) -> Result<HashSet<NaiveDate>> {
+    let lines: HashSet<String> = countries.lines().map(|d| d.to_string()).collect();
+    into_date(lines)
 }
