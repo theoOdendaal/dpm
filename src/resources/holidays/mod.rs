@@ -14,8 +14,6 @@ use std::{fmt::Debug, fs::File};
 const BASE_URL: &str = "https://date.nager.at/api/v3";
 const RESOURCE_DIR: &str = "src/resources/holidays";
 
-//type HolidayCalendar = HashMap<String, HashSet<NaiveDate>>;
-
 //  --- Errors ---
 type Result<T> = std::result::Result<T, Error>;
 
@@ -71,8 +69,6 @@ pub struct NoPeriods;
 #[derive(Default, Clone)]
 pub struct Periods(HashSet<u32>);
 
-//  --- Serialization structs ---
-
 #[derive(Default, Clone)]
 pub struct PublicHolidayRequestBuilder<C, P> {
     country_codes: C,
@@ -94,7 +90,7 @@ pub struct PublicHoliday {
 #[derive(Debug)]
 pub struct HolidayCalendar(HashMap<String, HashSet<NaiveDate>>);
 
-//  --- Implementations ---
+//  --- Custom implementations ---
 
 impl PublicHolidayRequestBuilder<NoCountryCodes, NoPeriods> {
     pub fn new() -> Self {
@@ -173,6 +169,8 @@ impl HolidayCalendar {
     }
 }
 
+//  --- Standard library trait implementations ---
+
 impl From<HashMap<String, HashSet<NaiveDate>>> for HolidayCalendar {
     fn from(value: HashMap<String, HashSet<NaiveDate>>) -> Self {
         Self(value)
@@ -194,7 +192,7 @@ impl TryFrom<&PublicHoliday> for NaiveDate {
     }
 }
 
-//  --- Utility ---
+//  --- Utility functions ---
 
 fn fetch_url(client: &Client, url: &str) -> Result<String> {
     // TODO match on status codes.
