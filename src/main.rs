@@ -15,14 +15,11 @@ use dpm::resources::holidays;
 fn main() {
     let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
-    //let step = Months::new(2);
-    //let bdc = BusinessDayConventions::ModifiedFollowing;
-    //let dcc = DayCountConventions::Actual360;
 
     let country_code = CountryTwoCode::from_str("ZA").unwrap();
     let country_code: String = country_code.into();
 
-    let _country_calendar: HashMap<String, HashSet<NaiveDate>> =
+    let country_calendar: HashMap<String, HashSet<NaiveDate>> =
         holidays::PublicHolidayRequestBuilder::new()
             .country_codes(&[&country_code, "US"])
             .periods(&[start.year() as u32, end.year() as u32])
@@ -32,15 +29,15 @@ fn main() {
             .save()
             .unwrap()
             .into();
-    println!("{_country_calendar:?}");
 
-    let res = holidays::load_holidays("ZA");
-    match res {
-        Ok(val) => println!("{val:?}"),
-        Err(e) => println!("{e:?}"),
-    }
+    let hol = country_calendar.get("ZA");
+    println!("{hol:?}");
 
     /*
+    //let step = Months::new(2);
+    //let bdc = BusinessDayConventions::ModifiedFollowing;
+    //let dcc = DayCountConventions::Actual360;
+
     let holidays = country_calendar
         .get(&country_code)
         .unwrap()

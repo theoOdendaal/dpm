@@ -14,9 +14,6 @@ use std::{fmt::Debug, fs::File};
 const BASE_URL: &str = "https://date.nager.at/api/v3";
 const RESOURCE_DIR: &str = "src/resources/holidays";
 
-//  --- Custom types ---
-#[derive(Debug)]
-pub struct HolidayCalendar(HashMap<String, HashSet<NaiveDate>>);
 //type HolidayCalendar = HashMap<String, HashSet<NaiveDate>>;
 
 //  --- Errors ---
@@ -64,13 +61,6 @@ impl From<serde_json::Error> for Error {
 
 //  --- Structs ---
 
-#[derive(Debug)]
-pub struct PublicHolidayRequest {
-    client: Client,
-    identifiers: Vec<String>,
-    urls: Vec<String>,
-}
-
 #[derive(Default, Clone)]
 pub struct NoCountryCodes;
 #[derive(Default, Clone)]
@@ -89,10 +79,20 @@ pub struct PublicHolidayRequestBuilder<C, P> {
     periods: P,
 }
 
+#[derive(Debug)]
+pub struct PublicHolidayRequest {
+    client: Client,
+    identifiers: Vec<String>,
+    urls: Vec<String>,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct PublicHoliday {
     date: String,
 }
+
+#[derive(Debug)]
+pub struct HolidayCalendar(HashMap<String, HashSet<NaiveDate>>);
 
 //  --- Implementations ---
 
@@ -150,9 +150,10 @@ impl PublicHolidayRequest {
 
             let json_text: Vec<PublicHoliday> = serde_json::from_str(&fetched_holidays)?;
 
-            let date_holidays: HashSet<String> = json_text.into_iter().map(|d| d.date).collect();
-
-            let parsed_holidays = into_date(date_holidays)?;
+            let parsed_holidays: HashSet<NaiveDate> = json_text
+                .iter()
+                .map(NaiveDate::try_from)
+                .collect::<Result<HashSet<NaiveDate>>>()?;
 
             holidays
                 .entry(cc.to_string())
@@ -184,6 +185,15 @@ impl From<HolidayCalendar> for HashMap<String, HashSet<NaiveDate>> {
     }
 }
 
+impl TryFrom<&PublicHoliday> for NaiveDate {
+    type Error = Error;
+
+    fn try_from(value: &PublicHoliday) -> std::result::Result<Self, Self::Error> {
+        NaiveDate::parse_from_str(&value.date, "%Y-%m-%d")
+            .map_err(|e| Error::Static(format!("Failed to parse date: {}", e)))
+    }
+}
+
 //  --- Utility ---
 
 fn fetch_url(client: &Client, url: &str) -> Result<String> {
@@ -208,20 +218,13 @@ where
 pub fn load_holidays(country_code: &str) -> Result<HashSet<NaiveDate>> {
     let path = format!("{}/{}.txt", RESOURCE_DIR, country_code);
     let contents = fs::read_to_string(path)?;
-    parse_to_collection(contents)
-}
-
-fn into_date(holidays: HashSet<String>) -> Result<HashSet<NaiveDate>> {
-    holidays
-        .into_iter()
+    //contents.lines().map(|d| NaiveDate::from(d)).collect()
+    //into_date_collection(contents.lines().map(|d| d.to_string()).collect())
+    contents
+        .lines()
         .map(|d| {
-            NaiveDate::parse_from_str(&d, "%Y-%m-%d")
+            NaiveDate::parse_from_str(d, "%Y-%m-%d")
                 .map_err(|e| Error::Static(format!("Failed to parse date: {}", e)))
         })
         .collect::<Result<HashSet<NaiveDate>>>()
-}
-
-pub fn parse_to_collection(countries: String) -> Result<HashSet<NaiveDate>> {
-    let lines: HashSet<String> = countries.lines().map(|d| d.to_string()).collect();
-    into_date(lines)
 }
