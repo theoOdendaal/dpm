@@ -1,14 +1,17 @@
 use chrono::NaiveDate;
 use reqwest::blocking::Client;
+use reqwest::StatusCode;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::{fmt::Debug, fs::File};
 
 // https://date.nager.at/swagger/index.html
 
-// Refactor to make it more concise.
+// TODO don't fetch when data is already downloaded? Create a config that json which stores search paramters?
+// TODO make error handling more suffice. Create more specific Error variants.
+// TODO Refactor to make it more concise.
 
 //  --- Constants ---
 const BASE_URL: &str = "https://date.nager.at/api/v3";
@@ -17,7 +20,6 @@ const RESOURCE_DIR: &str = "src/resources/holidays";
 //  --- Errors ---
 type Result<T> = std::result::Result<T, Error>;
 
-// TODO create more specific variants.
 #[derive(Debug)]
 pub enum Error {
     Static(String),
@@ -61,13 +63,15 @@ impl From<serde_json::Error> for Error {
 
 #[derive(Default, Clone)]
 pub struct NoCountryCodes;
+
 #[derive(Default, Clone)]
-pub struct CountryCodes(HashSet<String>);
+pub struct CountryCodes(Vec<String>);
 
 #[derive(Default, Clone)]
 pub struct NoPeriods;
+
 #[derive(Default, Clone)]
-pub struct Periods(HashSet<u32>);
+pub struct Periods(Vec<u32>);
 
 #[derive(Default, Clone)]
 pub struct PublicHolidayRequestBuilder<C, P> {
@@ -84,11 +88,11 @@ pub struct PublicHolidayRequest {
 
 #[derive(Deserialize, Debug)]
 pub struct PublicHoliday {
-    date: String,
+    date: NaiveDate,
 }
 
 #[derive(Debug)]
-pub struct HolidayCalendar(HashMap<String, HashSet<NaiveDate>>);
+pub struct HolidayCalendar(HashMap<String, Vec<NaiveDate>>);
 
 //  --- Custom implementations ---
 
@@ -109,7 +113,7 @@ impl<C, P> PublicHolidayRequestBuilder<C, P> {
     pub fn periods(self, periods: &[u32]) -> PublicHolidayRequestBuilder<C, Periods> {
         PublicHolidayRequestBuilder {
             country_codes: self.country_codes,
-            periods: Periods(periods.iter().copied().collect()),
+            periods: Periods(periods.to_vec()),
         }
     }
 }
@@ -139,17 +143,13 @@ impl PublicHolidayRequestBuilder<CountryCodes, Periods> {
 
 impl PublicHolidayRequest {
     pub fn fetch(&self) -> Result<HolidayCalendar> {
-        let mut holidays: HashMap<String, HashSet<NaiveDate>> = HashMap::new();
+        let mut holidays: HashMap<String, Vec<NaiveDate>> = HashMap::new();
 
         for (cc, url) in self.identifiers.iter().zip(self.urls.iter()) {
             let fetched_holidays = fetch_url(&self.client, url)?;
 
             let json_text: Vec<PublicHoliday> = serde_json::from_str(&fetched_holidays)?;
-
-            let parsed_holidays: HashSet<NaiveDate> = json_text
-                .iter()
-                .map(NaiveDate::try_from)
-                .collect::<Result<HashSet<NaiveDate>>>()?;
+            let parsed_holidays: Vec<NaiveDate> = json_text.iter().map(|d| d.into()).collect();
 
             holidays
                 .entry(cc.to_string())
@@ -171,24 +171,21 @@ impl HolidayCalendar {
 
 //  --- Standard library trait implementations ---
 
-impl From<HashMap<String, HashSet<NaiveDate>>> for HolidayCalendar {
-    fn from(value: HashMap<String, HashSet<NaiveDate>>) -> Self {
+impl From<HashMap<String, Vec<NaiveDate>>> for HolidayCalendar {
+    fn from(value: HashMap<String, Vec<NaiveDate>>) -> Self {
         Self(value)
     }
 }
 
-impl From<HolidayCalendar> for HashMap<String, HashSet<NaiveDate>> {
+impl From<HolidayCalendar> for HashMap<String, Vec<NaiveDate>> {
     fn from(value: HolidayCalendar) -> Self {
         value.0
     }
 }
 
-impl TryFrom<&PublicHoliday> for NaiveDate {
-    type Error = Error;
-
-    fn try_from(value: &PublicHoliday) -> std::result::Result<Self, Self::Error> {
-        NaiveDate::parse_from_str(&value.date, "%Y-%m-%d")
-            .map_err(|e| Error::Static(format!("Failed to parse date: {}", e)))
+impl From<&PublicHoliday> for NaiveDate {
+    fn from(value: &PublicHoliday) -> Self {
+        value.date
     }
 }
 
@@ -196,33 +193,28 @@ impl TryFrom<&PublicHoliday> for NaiveDate {
 
 fn fetch_url(client: &Client, url: &str) -> Result<String> {
     // TODO match on status codes.
-    Ok(client.get(url).send()?.text()?)
+    let response = client.get(url).send()?;
+    match response.status() {
+        StatusCode::OK => Ok(response.text()?),      // 200
+        StatusCode::BAD_REQUEST => unimplemented!(), // 400
+        StatusCode::NOT_FOUND => unimplemented!(),   // 404
+        _ => unimplemented!(),
+    }
 }
 
 //  --- Functionality ---
 
-fn write_to_file<T>(file_name: &str, collection: &HashSet<T>) -> Result<()>
-where
-    T: Debug,
-{
+fn write_to_file(file_name: &str, collection: &Vec<NaiveDate>) -> Result<()> {
     let path = format!("{}/{}.txt", RESOURCE_DIR, file_name);
     let mut file = File::create(path)?;
-    for line in collection {
-        writeln!(file, "{:?}", line)?
-    }
+    let json_string = serde_json::to_string(collection)?;
+    file.write_all(json_string.as_bytes())?;
     Ok(())
 }
 
-pub fn load_holidays(country_code: &str) -> Result<HashSet<NaiveDate>> {
+pub fn load_holidays(country_code: &str) -> Result<Vec<NaiveDate>> {
     let path = format!("{}/{}.txt", RESOURCE_DIR, country_code);
     let contents = fs::read_to_string(path)?;
-    //contents.lines().map(|d| NaiveDate::from(d)).collect()
-    //into_date_collection(contents.lines().map(|d| d.to_string()).collect())
-    contents
-        .lines()
-        .map(|d| {
-            NaiveDate::parse_from_str(d, "%Y-%m-%d")
-                .map_err(|e| Error::Static(format!("Failed to parse date: {}", e)))
-        })
-        .collect::<Result<HashSet<NaiveDate>>>()
+    let json_text: Vec<NaiveDate> = serde_json::from_str(&contents)?;
+    Ok(json_text)
 }

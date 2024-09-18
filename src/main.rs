@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use chrono::{Datelike, NaiveDate};
@@ -12,6 +12,7 @@ use dpm::iso::iso3166::CountryTwoCode;
 use dpm::resources::holidays;
 
 // TODO Implement a logger for the holiday_loader module.
+// TODO Use the builder patterns (as created in the holidays module) accross the project.
 fn main() {
     let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
@@ -19,7 +20,7 @@ fn main() {
     let country_code = CountryTwoCode::from_str("ZA").unwrap();
     let country_code: String = country_code.into();
 
-    let country_calendar: HashMap<String, HashSet<NaiveDate>> =
+    let country_calendar: HashMap<String, Vec<NaiveDate>> =
         holidays::PublicHolidayRequestBuilder::new()
             .country_codes(&[&country_code, "US"])
             .periods(&[start.year() as u32, end.year() as u32])
@@ -32,6 +33,8 @@ fn main() {
 
     let hol = country_calendar.get("ZA");
     println!("{hol:?}");
+
+    //println!("{:?}", holidays::load_holidays("ZA"));
 
     /*
     //let step = Months::new(2);
