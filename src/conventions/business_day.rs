@@ -1,6 +1,4 @@
-/// Business day conventions.
-use std::collections::HashSet;
-
+/// Business day convention
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 
 pub enum BusinessDayConventions {
@@ -17,20 +15,15 @@ impl Default for BusinessDayConventions {
     }
 }
 
-// Call using [NaiveDate].business_day(ModifiedFollowing).
 pub trait BusinessDay<A = Self> {
-    fn business_day(
-        &self,
-        convention: &BusinessDayConventions,
-        public_holidays: &HashSet<A>,
-    ) -> Self;
+    fn business_day(&self, convention: &BusinessDayConventions, public_holidays: &[A]) -> Self;
 }
 
 impl BusinessDay for NaiveDate {
     fn business_day(
         &self,
         convention: &BusinessDayConventions,
-        public_holidays: &HashSet<NaiveDate>,
+        public_holidays: &[NaiveDate],
     ) -> Self {
         match convention {
             BusinessDayConventions::Actual => *self,
@@ -54,7 +47,7 @@ impl BusinessDay<NaiveDate> for Vec<NaiveDate> {
     fn business_day(
         &self,
         convention: &BusinessDayConventions,
-        public_holidays: &HashSet<NaiveDate>,
+        public_holidays: &[NaiveDate],
     ) -> Self {
         self.iter()
             .map(|x| x.business_day(convention, public_holidays))
@@ -68,17 +61,17 @@ struct ModifiedFollowingBusinessDay;
 struct ModifiedPrecedingBusinessDay;
 
 trait BusinessDayOperations<A = Self, B = A> {
-    fn is_holiday(&self, public_holidays: &HashSet<B>) -> bool;
+    fn is_holiday(&self, public_holidays: &[B]) -> bool;
     fn is_weekend(&self) -> bool;
     fn is_different_month(&self, other: &Self) -> bool;
 }
 
 trait ConventionOperations<A: BusinessDayOperations, B = A> {
-    fn adjust_to_business_day(date: &A, public_holidays: &HashSet<B>) -> A;
+    fn adjust_to_business_day(date: &A, public_holidays: &[B]) -> A;
 }
 
 impl BusinessDayOperations for NaiveDate {
-    fn is_holiday(&self, public_holidays: &HashSet<Self>) -> bool {
+    fn is_holiday(&self, public_holidays: &[Self]) -> bool {
         public_holidays.contains(self)
     }
 
@@ -92,7 +85,7 @@ impl BusinessDayOperations for NaiveDate {
 }
 
 impl ConventionOperations<NaiveDate> for FollowingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &HashSet<NaiveDate>) -> NaiveDate {
+    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
         let mut following_date = *date;
         while following_date.is_holiday(public_holidays) || following_date.is_weekend() {
             following_date = following_date + Days::new(1);
@@ -102,7 +95,7 @@ impl ConventionOperations<NaiveDate> for FollowingBusinessDay {
 }
 
 impl ConventionOperations<NaiveDate> for PrecedingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &HashSet<NaiveDate>) -> NaiveDate {
+    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
         let mut previous_date = *date;
         while previous_date.is_holiday(public_holidays) || previous_date.is_weekend() {
             previous_date = previous_date - Days::new(1);
@@ -112,7 +105,7 @@ impl ConventionOperations<NaiveDate> for PrecedingBusinessDay {
 }
 
 impl ConventionOperations<NaiveDate> for ModifiedFollowingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &HashSet<NaiveDate>) -> NaiveDate {
+    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
         let mut following_date =
             FollowingBusinessDay::adjust_to_business_day(date, public_holidays);
 
@@ -125,7 +118,7 @@ impl ConventionOperations<NaiveDate> for ModifiedFollowingBusinessDay {
 }
 
 impl ConventionOperations<NaiveDate> for ModifiedPrecedingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &HashSet<NaiveDate>) -> NaiveDate {
+    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
         let mut previous_date = PrecedingBusinessDay::adjust_to_business_day(date, public_holidays);
 
         if date.is_different_month(&previous_date) {

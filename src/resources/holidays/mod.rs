@@ -1,3 +1,38 @@
+//! # Holiday API Fetcher
+//!
+//! This module provides functionality for fetching public holiday data from the Nager.Date API,
+//! handling the data in a local cache, and managing error handling for requests, file operations,
+//! and serialization.
+//!
+//! ## Example
+//!
+//! The following example demonstrates how to fetch public holidays for specified countries and
+//! save the results locally:
+//!
+//! ```rust,no_run
+//! use chrono::NaiveDate;
+//! use holidays::PublicHolidayRequestBuilder;
+//!
+//!let country_codes: Vec<&str> = vec!["ZA", "US"];
+//!let periods: Vec<u32> = vec![2023, 2024];
+//!
+//!let country_calendar = PublicHolidayRequestBuilder::new()
+//!     .country_codes(&country_codes)
+//!     .periods(&periods)
+//!     .build()
+//!     .fetch()
+//!     .unwrap()
+//!     .save()
+//!     .unwrap();
+//!
+//!
+//!let za_holidays = holiday_api::load_holidays("ZA").unwrap();
+//!
+//!println!("Holidays in South Africa: {:?}", za_holidays);
+//! ```
+//! Ensure that you have an internet connection for the API request, and the saved holidays
+//! will be written to the `src/resources/holidays` directory as JSON files.
+
 use chrono::NaiveDate;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
@@ -10,7 +45,7 @@ use std::{fmt::Debug, fs::File};
 // https://date.nager.at/swagger/index.html
 
 // TODO don't fetch when data is already downloaded? Create a config that json which stores search paramters?
-// TODO make error handling more suffice. Create more specific Error variants.
+// TODO improve Error enum.
 // TODO Refactor to make it more concise.
 
 //  --- Constants ---
@@ -70,13 +105,13 @@ impl From<serde_json::Error> for Error {
 //  --- Structs ---
 
 #[derive(Default, Clone)]
-pub struct NoCountryCodes;
+struct NoCountryCodes;
 
 #[derive(Default, Clone)]
 pub struct CountryCodes(Vec<String>);
 
 #[derive(Default, Clone)]
-pub struct NoPeriods;
+struct NoPeriods;
 
 #[derive(Default, Clone)]
 pub struct Periods(Vec<u32>);
@@ -95,7 +130,7 @@ pub struct PublicHolidayRequest {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PublicHoliday {
+struct PublicHoliday {
     date: NaiveDate,
 }
 
@@ -204,7 +239,7 @@ fn fetch_url(client: &Client, url: &str) -> Result<String> {
     let response = client.get(url).send()?;
     match response.status() {
         StatusCode::OK => Ok(response.text()?), // 200
-        _ => Err(Error::ResponseError(response.status())),
+        status => Err(Error::ResponseError(status)),
     }
 }
 

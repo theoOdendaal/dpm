@@ -5,6 +5,7 @@ pub mod conventions {
 }
 
 pub mod core {
+    pub mod interest;
     pub mod sequence;
 }
 
