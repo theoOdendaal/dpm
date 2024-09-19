@@ -22,13 +22,19 @@ type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    Static(String),
+    RequestError(reqwest::Error),
+    IOError(std::io::Error),
+    ParseError(chrono::format::ParseError),
+    SerializationError(serde_json::Error),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Static(s) => write!(f, "{}", s),
+            Self::RequestError(err) => write!(f, "{}", err),
+            Self::IOError(err) => write!(f, "{}", err),
+            Self::ParseError(err) => write!(f, "{:?}", err),
+            Self::SerializationError(err) => write!(f, "{}", err),
         }
     }
 }
@@ -37,25 +43,25 @@ impl std::error::Error for Error {}
 
 impl From<reqwest::Error> for Error {
     fn from(value: reqwest::Error) -> Self {
-        Self::Static(value.to_string())
+        Self::RequestError(value)
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
-        Self::Static(value.to_string())
+        Self::IOError(value)
     }
 }
 
 impl From<chrono::ParseError> for Error {
     fn from(value: chrono::format::ParseError) -> Self {
-        Self::Static(value.to_string())
+        Self::ParseError(value)
     }
 }
 
 impl From<serde_json::Error> for Error {
     fn from(value: serde_json::Error) -> Self {
-        Self::Static(value.to_string())
+        Self::SerializationError(value)
     }
 }
 
