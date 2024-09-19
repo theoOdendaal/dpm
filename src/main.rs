@@ -34,6 +34,8 @@ fn main() {
     let discount_factors = f64::simple_pv_fraction(&seq_frac, &df);
     let present_values = f64::interest_fraction_with_nominal(&seq_int, &discount_factors);
 
+    let res = f64::simple_interest_fraction(&vec![1.0, 2.0], &vec![1.0, 2.0, 3.0]);
+
     println!("{:?}", seq_res);
     println!("{:?}", seq_frac);
     println!("{:?}", interest_fraction);
