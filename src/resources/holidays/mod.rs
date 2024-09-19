@@ -23,6 +23,7 @@ type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     RequestError(reqwest::Error),
+    ResponseError(reqwest::StatusCode),
     IOError(std::io::Error),
     ParseError(chrono::format::ParseError),
     SerializationError(serde_json::Error),
@@ -32,6 +33,7 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RequestError(err) => write!(f, "{}", err),
+            Self::ResponseError(err) => write!(f, "{}", err),
             Self::IOError(err) => write!(f, "{}", err),
             Self::ParseError(err) => write!(f, "{:?}", err),
             Self::SerializationError(err) => write!(f, "{}", err),
@@ -201,10 +203,8 @@ fn fetch_url(client: &Client, url: &str) -> Result<String> {
     // TODO match on status codes.
     let response = client.get(url).send()?;
     match response.status() {
-        StatusCode::OK => Ok(response.text()?),      // 200
-        StatusCode::BAD_REQUEST => unimplemented!(), // 400
-        StatusCode::NOT_FOUND => unimplemented!(),   // 404
-        _ => unimplemented!(),
+        StatusCode::OK => Ok(response.text()?), // 200
+        _ => Err(Error::ResponseError(response.status())),
     }
 }
 
