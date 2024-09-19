@@ -44,15 +44,15 @@ impl DayCountConventions {
 
 //  --- Traits ---
 
-trait DayCount<A, B> {
-    fn day_count(date1: A, date2: A) -> B;
+trait DayCount<A, B, C> {
+    fn day_count(date1: A, date2: B) -> C;
 
-    fn year_fraction(date1: A, date2: A) -> B;
+    fn year_fraction(date1: A, date2: B) -> C;
 }
 
-impl<T, A, B> DayCount<&Vec<T>, Vec<B>> for A
+impl<T, A, B> DayCount<&Vec<T>, &Vec<T>, Vec<B>> for A
 where
-    A: DayCount<T, B>,
+    A: DayCount<T, T, B>,
     T: Copy,
 {
     fn day_count(date1: &Vec<T>, date2: &Vec<T>) -> Vec<B> {
@@ -72,6 +72,21 @@ where
     }
 }
 
+// TODO Refactor the code so this can be used to calculate the discount days.
+impl<T, A, B> DayCount<&T, &Vec<T>, Vec<B>> for A
+where
+    A: DayCount<T, T, B>,
+    T: Copy,
+{
+    fn day_count(date1: &T, date2: &Vec<T>) -> Vec<B> {
+        date2.iter().map(|a| A::day_count(*date1, *a)).collect()
+    }
+
+    fn year_fraction(date1: &T, date2: &Vec<T>) -> Vec<B> {
+        date2.iter().map(|a| A::day_count(*date1, *a)).collect()
+    }
+}
+
 //  --- Structs ---
 
 struct Thirty360Bond;
@@ -85,7 +100,7 @@ struct Actual365Fixed;
 
 //  --- Trait implementations ---
 
-impl DayCount<NaiveDate, f64> for Thirty360Bond {
+impl DayCount<NaiveDate, NaiveDate, f64> for Thirty360Bond {
     fn day_count(date1: NaiveDate, date2: NaiveDate) -> f64 {
         let (y1, m1, d1) = (
             date1.year() as f64,
@@ -110,7 +125,7 @@ impl DayCount<NaiveDate, f64> for Thirty360Bond {
     }
 }
 
-impl DayCount<NaiveDate, f64> for ThirtyE360 {
+impl DayCount<NaiveDate, NaiveDate, f64> for ThirtyE360 {
     fn day_count(date1: NaiveDate, date2: NaiveDate) -> f64 {
         let (y1, m1, d1) = (
             date1.year() as f64,
@@ -130,7 +145,7 @@ impl DayCount<NaiveDate, f64> for ThirtyE360 {
     }
 }
 
-impl DayCount<NaiveDate, f64> for Actual360 {
+impl DayCount<NaiveDate, NaiveDate, f64> for Actual360 {
     fn day_count(date1: NaiveDate, date2: NaiveDate) -> f64 {
         (date2 - date1).num_days() as f64
     }
@@ -140,7 +155,7 @@ impl DayCount<NaiveDate, f64> for Actual360 {
     }
 }
 
-impl DayCount<NaiveDate, f64> for Actual365Fixed {
+impl DayCount<NaiveDate, NaiveDate, f64> for Actual365Fixed {
     fn day_count(date1: NaiveDate, date2: NaiveDate) -> f64 {
         (date2 - date1).num_days() as f64
     }

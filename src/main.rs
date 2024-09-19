@@ -12,6 +12,7 @@ use dpm::resources::holidays;
 fn main() {
     let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
+    let valuation = NaiveDate::from_ymd_opt(2024, 6, 30).unwrap();
 
     let country_code: String = CountryTwoCode::from_str("ZA").unwrap().into();
 
@@ -33,8 +34,6 @@ fn main() {
 
     let discount_factors = f64::simple_pv_fraction(&seq_frac, &df);
     let present_values = f64::interest_fraction_with_nominal(&seq_int, &discount_factors);
-
-    let res = f64::simple_interest_fraction(&vec![1.0, 2.0], &vec![1.0, 2.0, 3.0]);
 
     println!("{:?}", seq_res);
     println!("{:?}", seq_frac);
