@@ -1,3 +1,5 @@
+/// Interest calculation conventions.
+
 // TODO implement unit tests.
 
 // FutureValue impl for type will automatically allow use of PresentValue and InterestFraction trait.
@@ -39,7 +41,8 @@ pub trait InterestFraction<A, B, C = A>: FutureValue<A, B, C> {
 
     fn continuous_interest_fraction(n: &A, r: &B) -> C;
 
-    fn interest_fraction_with_nominal(pv: &A, frac: &B) -> C {
+    // TODO, call this something else more descriptive.
+    fn with_nominal(pv: &A, frac: &B) -> C {
         Self::simple_interest_fraction(pv, frac)
     }
 }
