@@ -31,7 +31,7 @@
 //!println!("Holidays in South Africa: {:?}", za_holidays);
 //! ```
 //! Ensure that you have an internet connection for the API request, and the saved holidays
-//! will be written to the `src/resources/holidays` directory as JSON files.
+//! will be written to the `src/resources/holidays` directory as text files.
 
 use chrono::NaiveDate;
 use reqwest::blocking::Client;
@@ -137,7 +137,7 @@ struct PublicHoliday {
 #[derive(Debug)]
 pub struct HolidayCalendar(HashMap<String, Vec<NaiveDate>>);
 
-//  --- Custom implementations ---
+//  --- Implementations: Custom traits ---
 
 impl PublicHolidayRequestBuilder<NoCountryCodes, NoPeriods> {
     pub fn new() -> Self {
@@ -212,7 +212,7 @@ impl HolidayCalendar {
     }
 }
 
-//  --- Standard library trait implementations ---
+//  --- Implementations: Standard library traits ---
 
 impl From<HashMap<String, Vec<NaiveDate>>> for HolidayCalendar {
     fn from(value: HashMap<String, Vec<NaiveDate>>) -> Self {

@@ -7,7 +7,17 @@ pub trait Interpolate<A, B> {
 pub struct Linear;
 pub struct LogLinear;
 
-//  --- Trait implementations ---
+//  --- Implementations: Blanket ---
+impl<A> Interpolate<Vec<f64>, Vec<f64>> for A
+where
+    A: Interpolate<Vec<f64>, f64>,
+{
+    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &Vec<f64>) -> Vec<f64> {
+        xp.iter().map(|a| A::interpolate(x, y, a)).collect()
+    }
+}
+
+//  --- Implementations: Custom traits ---
 impl Interpolate<Vec<f64>, f64> for Linear {
     fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
         let index = get_index(x, xp);
@@ -42,6 +52,6 @@ fn get_index(x: &[f64], xp: &f64) -> usize {
 
     // 'x'.len() - 1 would represent the last index
     // within the collection. However, there should
-
+    // be left room for index + 1 (which is equivalent to len - 1);
     index_count.min(x.len() - 2)
 }

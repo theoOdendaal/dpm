@@ -1,18 +1,29 @@
-use std::str::FromStr;
-
-use chrono::{Months, NaiveDate};
-
-use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
-use dpm::conventions::day_count::DayCountConventions;
-use dpm::core::interest::{InterestFraction, PresentValue};
-use dpm::core::sequence::Sequence;
-use dpm::iso::iso3166::CountryTwoCode;
-use dpm::resources::holidays;
+use std::collections::BTreeMap;
 
 // TODO, use &[T] rather than &Vec<T>.
 // TODO, implement CLI functionality.
 
+use dpm::core::sequence::Sequence;
+
+use dpm::core::curves::Curve;
+use dpm::interpolation::{self, Interpolate};
+
 fn main() {
+    let path = "src/resources/curves";
+    let dir = format!("{}/zar_disc_csa.txt", path);
+    let contents = std::fs::read_to_string(dir).unwrap();
+    let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
+    let curve = Curve::from(curve);
+
+    let (x, y): (Vec<f64>, Vec<f64>) = curve.into();
+    let xp: Vec<f64> = u32::seq(1, 1000, 1).into_iter().map(|a| a as f64).collect();
+    let res = interpolation::Linear::interpolate(&x, &y, &xp);
+
+    println!("{:?}", x);
+    println!("{:?}", y);
+    println!("{:?}", res);
+
+    /*
     let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
     let valuation = NaiveDate::from_ymd_opt(2024, 6, 30).unwrap();
@@ -45,4 +56,5 @@ fn main() {
     println!("{:?}", &discount_factors);
     println!("{:?}", &present_values);
     println!("{:?}", &present_values.iter().sum::<f64>());
+    */
 }
