@@ -11,6 +11,10 @@
 //  --- Trait definition ---
 
 // To be used when compounding frequency is lessor than payment frequency, i.e. to derive new dirty nominal.
+pub trait ToNegative {
+    fn to_negative(&self) -> Self;
+}
+
 pub trait FutureValue<A, B, C = A> {
     fn simple_fv_fraction(n: &A, r: &B) -> C;
 
@@ -45,10 +49,6 @@ pub trait InterestFraction<A, B, C = A>: FutureValue<A, B, C> {
     fn with_nominal(pv: &A, frac: &B) -> C {
         Self::simple_interest_fraction(pv, frac)
     }
-}
-
-pub trait ToNegative {
-    fn to_negative(&self) -> Self;
 }
 
 // TODO implement

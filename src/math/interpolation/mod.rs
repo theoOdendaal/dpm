@@ -1,5 +1,3 @@
-use serde_json::value::Index;
-
 //  --- Trait definitions ---
 pub trait Interpolate<A, B> {
     fn interpolate(x: &A, y: &A, xp: &B) -> B;
@@ -23,7 +21,7 @@ where
 //  --- Implementations: Custom traits ---
 impl Interpolate<Vec<f64>, f64> for Linear {
     fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
-        let index = get_index(x, xp);
+        let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
 
@@ -33,7 +31,7 @@ impl Interpolate<Vec<f64>, f64> for Linear {
 
 impl Interpolate<Vec<f64>, f64> for LogLinear {
     fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
-        let index = get_index(x, xp);
+        let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
 
@@ -44,7 +42,7 @@ impl Interpolate<Vec<f64>, f64> for LogLinear {
 
 impl Interpolate<Vec<f64>, f64> for Exponential {
     fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
-        let index = get_index(x, xp);
+        let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
 
@@ -53,8 +51,9 @@ impl Interpolate<Vec<f64>, f64> for Exponential {
 }
 
 //  --- Helper functions ---
-/// Return the index of the biggest 'x' element, smaller than or equal to "xp".
-fn get_index(x: &[f64], xp: &f64) -> usize {
+/// Return the index of the point that partitions 'x'. The index
+/// is clipped at 0 and length less 2.
+fn partition_index(x: &[f64], xp: &f64) -> usize {
     let values_smaller: Vec<&f64> = x.iter().filter(|element| *element <= xp).collect();
 
     // Convert 'length' into 'index'.
