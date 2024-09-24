@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use dpm::core::sequence::Sequence;
 
 use dpm::core::curves::Curve;
-use dpm::interpolation::{self, Interpolate};
+use dpm::math::interpolation::{self, Interpolate};
 
 fn main() {
     let path = "src/resources/curves";

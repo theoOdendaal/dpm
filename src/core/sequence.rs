@@ -29,6 +29,7 @@ where
 
         sequence.push(min_value);
         sequence.reverse();
+        sequence.shrink_to_fit();
         sequence
     }
 }
