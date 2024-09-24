@@ -1,31 +1,34 @@
 use std::collections::BTreeMap;
-pub struct Curve(BTreeMap<u32, f64>);
 
 // What are the trait requirements for a BTreeMap?
 
-//  --- Implementations: Standard library traits ---
-impl From<BTreeMap<u32, f64>> for Curve {
-    fn from(value: BTreeMap<u32, f64>) -> Self {
-        Curve(value)
-    }
+//  --- Trait definitions ---
+
+pub trait Curve<T> {
+    fn x(&self) -> Vec<T>;
+
+    fn y(&self) -> Vec<T>;
 }
 
-impl Curve {
+//  --- Implementations: Blanket ---
+
+impl<A, B> Curve<f64> for BTreeMap<A, B>
+where
+    A: Copy + Into<f64>,
+    B: Copy + Into<f64>,
+    Vec<f64>: FromIterator<A> + FromIterator<B>,
+{
     fn x(&self) -> Vec<f64> {
-        let mut x: Vec<f64> = self.0.keys().map(|a| *a as f64).collect();
+        let mut x: Vec<f64> = self.keys().copied().map(Into::into).collect();
         x.shrink_to_fit();
         x
     }
 
     fn y(&self) -> Vec<f64> {
-        let mut y: Vec<f64> = self.0.values().copied().collect();
+        let mut y: Vec<f64> = self.values().copied().map(Into::into).collect();
         y.shrink_to_fit();
         y
     }
 }
 
-impl From<Curve> for (Vec<f64>, Vec<f64>) {
-    fn from(value: Curve) -> Self {
-        (value.x(), value.y())
-    }
-}
+//  --- Implementations: Custom traits ---

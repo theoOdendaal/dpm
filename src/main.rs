@@ -13,9 +13,8 @@ fn main() {
     let dir = format!("{}/zar_disc_csa.txt", path);
     let contents = std::fs::read_to_string(dir).unwrap();
     let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
-    let curve = Curve::from(curve);
+    let (x, y) = (curve.x(), curve.y());
 
-    let (x, y): (Vec<f64>, Vec<f64>) = curve.into();
     let xp: Vec<f64> = u32::seq(1, 100, 1).into_iter().map(|a| a as f64).collect();
 
     let res = interpolation::Exponential::interpolate(&x, &y, &xp);
