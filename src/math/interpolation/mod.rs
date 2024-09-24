@@ -1,3 +1,5 @@
+use serde_json::value::Index;
+
 //  --- Trait definitions ---
 pub trait Interpolate<A, B> {
     fn interpolate(x: &A, y: &A, xp: &B) -> B;
@@ -6,6 +8,7 @@ pub trait Interpolate<A, B> {
 //  --- Structs ---
 pub struct Linear;
 pub struct LogLinear;
+pub struct Exponential;
 
 //  --- Implementations: Blanket ---
 impl<A> Interpolate<Vec<f64>, Vec<f64>> for A
@@ -36,6 +39,16 @@ impl Interpolate<Vec<f64>, f64> for LogLinear {
 
         std::f64::consts::E
             .powf(((xp - x1) / (x2 - x1)) * y2.ln() + ((x2 - xp) / (x2 - x1)) * y1.ln())
+    }
+}
+
+impl Interpolate<Vec<f64>, f64> for Exponential {
+    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        let index = get_index(x, xp);
+        let (x1, x2) = (x[index], x[index + 1]);
+        let (y1, y2) = (y[index], y[index + 1]);
+
+        y2.powf((xp - x1) / (x2 - x1)) * y1.powf((x2 - xp) / (x2 - x1))
     }
 }
 

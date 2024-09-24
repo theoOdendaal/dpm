@@ -16,8 +16,9 @@ fn main() {
     let curve = Curve::from(curve);
 
     let (x, y): (Vec<f64>, Vec<f64>) = curve.into();
-    let xp: Vec<f64> = u32::seq(1, 1000, 1).into_iter().map(|a| a as f64).collect();
-    let res = interpolation::Linear::interpolate(&x, &y, &xp);
+    let xp: Vec<f64> = u32::seq(1, 100, 1).into_iter().map(|a| a as f64).collect();
+
+    let res = interpolation::Exponential::interpolate(&x, &y, &xp);
 
     println!("{:?}", x);
     println!("{:?}", y);
