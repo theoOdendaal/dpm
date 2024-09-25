@@ -20,6 +20,8 @@ pub mod iso {
 
 pub mod macros {
     pub mod approx;
+    pub mod pretty_print;
+    pub mod tprint;
 }
 
 pub mod math {

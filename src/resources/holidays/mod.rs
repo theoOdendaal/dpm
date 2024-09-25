@@ -105,13 +105,13 @@ impl From<serde_json::Error> for Error {
 //  --- Structs ---
 
 #[derive(Default, Clone)]
-struct NoCountryCodes;
+pub struct NoCountryCodes;
 
 #[derive(Default, Clone)]
 pub struct CountryCodes(Vec<String>);
 
 #[derive(Default, Clone)]
-struct NoPeriods;
+pub struct NoPeriods;
 
 #[derive(Default, Clone)]
 pub struct Periods(Vec<u32>);

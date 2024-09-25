@@ -1,8 +1,25 @@
 use std::collections::BTreeMap;
 
-//  --- Errors ---
+/*
+    use chrono::NaiveDate;
+    use dpm::core::curves::{Curve, CurveParameters};
 
-//type Result<T> = std::result::Result<T, Error>;
+    let x = vec!["2023-12-31", "2023-12-31"];
+    let y = vec![0.06, 0.07];
+    let curve = CurveParameters::new(&x, &y);
+    if let Ok(trans_res) = curve.try_map_x(|a| NaiveDate::parse_from_str(a, "%Y-%m-%d")) {
+        let curve = CurveParameters::new(&trans_res, &y);
+
+        println!("{:?}", curve);
+    }
+
+*/
+
+// TODO try and remove all references to clone and copy.
+// TODO create more Error variants.
+// TODO impl From<> for Error for more instances.
+
+//  --- Errors ---
 
 #[derive(Debug)]
 pub enum Error {
@@ -30,10 +47,10 @@ impl From<chrono::format::ParseError> for Error {
 /// Requirement for a type to be classified as a curve.
 pub trait Curve<A, B = A> {
     /// Return 'key' field of Curve.
-    fn get_x(&self) -> &Vec<A>;
+    fn get_x(&self) -> Vec<A>;
 
     /// Return 'value' field of Curve.
-    fn get_y(&self) -> &Vec<B>;
+    fn get_y(&self) -> Vec<B>;
 
     /// Map 'key' field using a closure.
     fn map_x<F>(&self, closure: F) -> Vec<A>
@@ -101,12 +118,12 @@ where
     A: Clone,
     B: Clone,
 {
-    fn get_x(&self) -> &Vec<A> {
-        &self.x
+    fn get_x(&self) -> Vec<A> {
+        self.x.to_vec()
     }
 
-    fn get_y(&self) -> &Vec<B> {
-        &self.y
+    fn get_y(&self) -> Vec<B> {
+        self.y.to_vec()
     }
 }
 
@@ -124,19 +141,3 @@ where
         Self { x, y }
     }
 }
-
-/*
-impl<A, B> From<CurveParameters<A, B>> for CurveParameters<f64>
-where
-    A: Copy,
-    B: Copy,
-    f64: From<A> + From<B>,
-{
-    fn from(value: CurveParameters<A, B>) -> Self {
-        Self {
-            x: value.get_x().into_iter().map(|a| f64::from(*a)).collect(),
-            y: value.get_y().iter().map(|a| f64::from(*a)).collect(),
-        }
-    }
-}
-    */
