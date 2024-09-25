@@ -1,5 +1,7 @@
 /// Interest calculation conventions.
 
+// TODO, implement compounding frequencies (including conversion).
+
 // TODO implement unit tests.
 
 // FutureValue impl for type will automatically allow use of PresentValue and InterestFraction trait.
@@ -163,6 +165,8 @@ impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
         fv.iter().map(|a| a - pv).collect()
     }
 }
+
+//  --- Implementations: Blanket ---
 
 impl<A, B, C, D> PresentValue<A, B, C> for D
 where

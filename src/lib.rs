@@ -6,8 +6,12 @@ pub mod conventions {
 
 pub mod core {
     pub mod curves;
-    pub mod interest;
     pub mod sequence;
+}
+
+pub mod interest {
+    pub mod ops;
+    pub mod types;
 }
 
 pub mod iso {

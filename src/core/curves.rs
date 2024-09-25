@@ -1,34 +1,142 @@
 use std::collections::BTreeMap;
 
-// What are the trait requirements for a BTreeMap?
+//  --- Errors ---
 
-//  --- Trait definitions ---
+//type Result<T> = std::result::Result<T, Error>;
 
-pub trait Curve<T> {
-    fn x(&self) -> Vec<T>;
-
-    fn y(&self) -> Vec<T>;
+#[derive(Debug)]
+pub enum Error {
+    ParseError(chrono::format::ParseError),
 }
 
-//  --- Implementations: Blanket ---
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ParseError(err) => write!(f, "{:?}", err),
+        }
+    }
+}
 
-impl<A, B> Curve<f64> for BTreeMap<A, B>
+impl std::error::Error for Error {}
+
+impl From<chrono::format::ParseError> for Error {
+    fn from(value: chrono::format::ParseError) -> Self {
+        Self::ParseError(value)
+    }
+}
+
+//  --- Trait definitions and blanket implementations ---
+
+/// Requirement for a type to be classified as a curve.
+pub trait Curve<A, B = A> {
+    /// Return 'key' field of Curve.
+    fn get_x(&self) -> &Vec<A>;
+
+    /// Return 'value' field of Curve.
+    fn get_y(&self) -> &Vec<B>;
+
+    /// Map 'key' field using a closure.
+    fn map_x<F>(&self, closure: F) -> Vec<A>
+    where
+        F: Fn(&A) -> A,
+    {
+        self.get_x().iter().map(closure).collect::<Vec<A>>()
+    }
+
+    /// Map 'value' field using a closure.
+    fn map_y<F>(&self, closure: F) -> Vec<B>
+    where
+        F: Fn(&B) -> B,
+    {
+        self.get_y().iter().map(closure).collect::<Vec<B>>()
+    }
+
+    /// Map 'key' field using a closure, returing Result.
+    fn try_map_x<F, E, C>(&self, closure: F) -> Result<Vec<C>, E>
+    where
+        F: Fn(&A) -> Result<C, E>,
+        Error: From<E>,
+    {
+        self.get_x()
+            .iter()
+            .map(closure)
+            .collect::<Result<Vec<C>, E>>()
+    }
+
+    /// Map 'value' field using a closure, returing Result.
+    fn try_map_y<F, E, C>(&self, closure: F) -> Result<Vec<C>, E>
+    where
+        F: Fn(&B) -> Result<C, E>,
+        Error: From<E>,
+    {
+        self.get_y()
+            .iter()
+            .map(closure)
+            .collect::<Result<Vec<C>, E>>()
+    }
+}
+
+//  --- Default curve type construction ---
+#[derive(Debug)]
+pub struct CurveParameters<A, B = A> {
+    x: Vec<A>,
+    y: Vec<B>,
+}
+
+impl<A, B> CurveParameters<A, B>
+where
+    A: Clone,
+    B: Clone,
+{
+    pub fn new(x: &[A], y: &[B]) -> Self {
+        Self {
+            x: x.to_vec(),
+            y: y.to_vec(),
+        }
+    }
+}
+
+impl<A, B> Curve<A, B> for CurveParameters<A, B>
+where
+    A: Clone,
+    B: Clone,
+{
+    fn get_x(&self) -> &Vec<A> {
+        &self.x
+    }
+
+    fn get_y(&self) -> &Vec<B> {
+        &self.y
+    }
+}
+
+//  --- Implementations: From trait ---
+impl<A, B> From<BTreeMap<A, B>> for CurveParameters<f64>
 where
     A: Copy + Into<f64>,
     B: Copy + Into<f64>,
-    Vec<f64>: FromIterator<A> + FromIterator<B>,
 {
-    fn x(&self) -> Vec<f64> {
-        let mut x: Vec<f64> = self.keys().copied().map(Into::into).collect();
+    fn from(value: BTreeMap<A, B>) -> Self {
+        let mut x: Vec<f64> = value.keys().copied().map(Into::into).collect();
+        let mut y: Vec<f64> = value.values().copied().map(Into::into).collect();
         x.shrink_to_fit();
-        x
-    }
-
-    fn y(&self) -> Vec<f64> {
-        let mut y: Vec<f64> = self.values().copied().map(Into::into).collect();
         y.shrink_to_fit();
-        y
+        Self { x, y }
     }
 }
 
-//  --- Implementations: Custom traits ---
+/*
+impl<A, B> From<CurveParameters<A, B>> for CurveParameters<f64>
+where
+    A: Copy,
+    B: Copy,
+    f64: From<A> + From<B>,
+{
+    fn from(value: CurveParameters<A, B>) -> Self {
+        Self {
+            x: value.get_x().into_iter().map(|a| f64::from(*a)).collect(),
+            y: value.get_y().iter().map(|a| f64::from(*a)).collect(),
+        }
+    }
+}
+    */

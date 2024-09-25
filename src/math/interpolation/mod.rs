@@ -57,7 +57,7 @@ fn partition_index(x: &[f64], xp: &f64) -> usize {
     let values_smaller: Vec<&f64> = x.iter().filter(|element| *element <= xp).collect();
 
     // Convert 'length' into 'index'.
-    let index_count = values_smaller.len() - 1;
+    let index_count = values_smaller.len().max(1) - 1;
 
     // Clips the value at zero.
     let index_count = index_count.max(0);

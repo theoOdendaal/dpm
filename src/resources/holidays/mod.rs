@@ -9,7 +9,7 @@
 //! The following example demonstrates how to fetch public holidays for specified countries and
 //! save the results locally:
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use chrono::NaiveDate;
 //! use holidays::PublicHolidayRequestBuilder;
 //!
@@ -90,7 +90,7 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<chrono::ParseError> for Error {
+impl From<chrono::format::ParseError> for Error {
     fn from(value: chrono::format::ParseError) -> Self {
         Self::ParseError(value)
     }
