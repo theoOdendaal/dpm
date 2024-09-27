@@ -134,11 +134,9 @@ name = "dpm"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "quote",
  "reqwest",
  "serde",
  "serde_json",
- "syn",
 ]
 
 [[package]]

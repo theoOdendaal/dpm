@@ -1,3 +1,5 @@
+// TODO if xp = 0, return 1.0.
+
 //  --- Trait definitions ---
 pub trait Interpolate<A, B> {
     fn interpolate(x: &A, y: &A, xp: &B) -> B;

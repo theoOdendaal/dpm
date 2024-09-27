@@ -104,7 +104,7 @@ fn main() {
     table_print!(
         TERMINAL_WIDTH,
         headings,
-        seq_res,
+        seq_res[1..],
         interest_fractions,
         discount_fractions,
         discount_factors,

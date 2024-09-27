@@ -1,18 +1,24 @@
-/// Interest calculation conventions.
+//! Interest calculation conventions.
 
 // TODO, implement compounding frequencies (including conversion).
-
 // TODO implement unit tests.
+// TODO add documentations.
+// TODO Cleanup this module.
 
 // FutureValue impl for type will automatically allow use of PresentValue and InterestFraction trait.
 
 //  --- Errors ---
+// TODO Imple the required logic for this Error enum, and incorporate in code.
+pub enum Error {
+    MismatchedLengths,
+}
 
 // TODO implement error handling, specifically for zip iterations. Ensure vec's are of similar length.
 
 //  --- Trait definition ---
 
-// To be used when compounding frequency is lessor than payment frequency, i.e. to derive new dirty nominal.
+// FIXME Should the PresentValue, FutureValue and InterestFraction traits not be combined into a single trait as below?
+
 pub trait ToNegative {
     fn to_negative(&self) -> Self;
 }
@@ -53,10 +59,19 @@ pub trait InterestFraction<A, B, C = A>: FutureValue<A, B, C> {
     }
 }
 
-// TODO implement
-//pub trait CompoundingFrequencyConversion<A> {}
+// Infer interest rate from present value.
+// Rate conversions can be performed by first calculating
+// the FutureValue using the old rate, and then using that
+// FutureValue in the InferRate logic.
+pub trait InferRate<A, B, C = A> {
+    fn infer_simple_rate(pv: &A, n: &B) -> C;
 
-//  --- Trait implementations ---
+    fn infer_discrete_rate(pv: &A, n: &B, m: &f64) -> C;
+
+    fn infer_continious_rate(pv: &A, n: &B) -> C;
+}
+
+//  --- Trait implementations: ToNegative ---
 
 impl ToNegative for f64 {
     fn to_negative(&self) -> Self {
@@ -70,6 +85,7 @@ impl ToNegative for Vec<f64> {
     }
 }
 
+//  --- Trait implementations: FutureValue ---
 impl FutureValue<f64, f64> for f64 {
     fn simple_fv_fraction(n: &f64, r: &f64) -> f64 {
         1.0 + r * n
@@ -134,7 +150,7 @@ impl FutureValue<f64, Vec<f64>, Vec<f64>> for f64 {
 
 impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
     fn simple_fv_fraction(n: &Vec<f64>, r: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor.
+        // TODO, refactor assert_eq.
         assert_eq!(n.len(), r.len());
 
         n.iter()
@@ -144,7 +160,7 @@ impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
     }
 
     fn discrete_fv_fraction(n: &Vec<f64>, r: &Vec<f64>, m: &f64) -> Vec<f64> {
-        // TODO, refactor.
+        // TODO, refactor assert_eq.
         assert_eq!(n.len(), r.len());
         n.iter()
             .zip(r.iter())
@@ -153,7 +169,7 @@ impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
     }
 
     fn continuous_fv_fraction(n: &Vec<f64>, r: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor.
+        // TODO, refactor assert_eq.
         assert_eq!(n.len(), r.len());
         n.iter()
             .zip(r.iter())
@@ -163,6 +179,50 @@ impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
 
     fn sub_pv(fv: &Vec<f64>, pv: &f64) -> Vec<f64> {
         fv.iter().map(|a| a - pv).collect()
+    }
+}
+
+//  --- Trait implementations: InferRateFromFutureValue ---
+impl InferRate<f64, f64> for f64 {
+    fn infer_simple_rate(pv: &f64, n: &f64) -> f64 {
+        (1.0 - pv) / (pv * n)
+    }
+
+    fn infer_discrete_rate(pv: &f64, n: &f64, m: &f64) -> f64 {
+        ((1.0 - pv).powf(1.0 / (n * m)) - 1.0) * m
+    }
+
+    fn infer_continious_rate(pv: &f64, n: &f64) -> f64 {
+        (1.0 / n) * ((1.0 / pv).ln())
+    }
+}
+
+impl InferRate<Vec<f64>, Vec<f64>> for f64 {
+    fn infer_simple_rate(pv: &Vec<f64>, n: &Vec<f64>) -> Vec<f64> {
+        // TODO, refactor assert_eq.
+        assert_eq!(pv.len(), n.len());
+        pv.iter()
+            .zip(n.iter())
+            .map(|(a, b)| f64::infer_simple_rate(a, b))
+            .collect()
+    }
+
+    fn infer_discrete_rate(pv: &Vec<f64>, n: &Vec<f64>, m: &f64) -> Vec<f64> {
+        // TODO, refactor assert_eq.
+        assert_eq!(pv.len(), n.len());
+        pv.iter()
+            .zip(n.iter())
+            .map(|(a, b)| f64::infer_discrete_rate(a, b, m))
+            .collect()
+    }
+
+    fn infer_continious_rate(pv: &Vec<f64>, n: &Vec<f64>) -> Vec<f64> {
+        // TODO, refactor assert_eq.
+        assert_eq!(pv.len(), n.len());
+        pv.iter()
+            .zip(n.iter())
+            .map(|(a, b)| f64::infer_continious_rate(a, b))
+            .collect()
     }
 }
 

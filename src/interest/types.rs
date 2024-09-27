@@ -48,12 +48,40 @@
 // ^ Therefore, when calculating the discount factor using swap rates, you should consider previous discount factors,
 // while calculating the discount factor using the spot rates, you only use a single rate.
 
-// FIXME update the logic within this module, as currently only semi-annual compounding work.
-
-#[derive(Debug, PartialEq)]
 pub enum RateTypes {
     Swap,
     Discount,
     Spot,
     Forward,
 }
+
+//  --- Compounding frequencies ---
+pub enum CompoundingFrequencies {
+    Weekly,
+    Monthly,
+    BiMonthly,
+    Quarterly,
+    TriAnnually,
+    SemiAnnually,
+    Annually,
+    Continious,
+}
+
+impl From<CompoundingFrequencies> for f64 {
+    fn from(value: CompoundingFrequencies) -> Self {
+        match value {
+            CompoundingFrequencies::Weekly => 52.0,
+            CompoundingFrequencies::Monthly => 12.0,
+            CompoundingFrequencies::BiMonthly => 6.0,
+            CompoundingFrequencies::Quarterly => 4.0,
+            CompoundingFrequencies::TriAnnually => 3.0,
+            CompoundingFrequencies::SemiAnnually => 2.0,
+            CompoundingFrequencies::Annually => 1.0,
+            CompoundingFrequencies::Continious => 99999.0,
+        }
+    }
+}
+
+struct SimpleCompounding<T>(T, T);
+struct DiscreteCompounding<T>(T, CompoundingFrequencies);
+struct ContiniousCompounding<T>(T, T);
