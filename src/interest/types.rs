@@ -81,7 +81,3 @@ impl From<CompoundingFrequencies> for f64 {
         }
     }
 }
-
-struct SimpleCompounding<T>(T, T);
-struct DiscreteCompounding<T>(T, CompoundingFrequencies);
-struct ContiniousCompounding<T>(T, T);

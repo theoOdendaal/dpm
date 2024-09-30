@@ -5,11 +5,6 @@ pub trait Sequence<A, B, C> {
     fn seq(lower: A, upper: A, step: B) -> C;
 }
 
-// TODO impl !
-pub trait LinearSequence<A, B> {
-    fn lin_space(lower: A, upper: A, n: usize) -> B;
-}
-
 impl<A, B> Sequence<A, B, Vec<A>> for A
 where
     A: Copy + std::cmp::PartialOrd + std::ops::Sub<B, Output = A> + std::ops::Add<B, Output = A>,
