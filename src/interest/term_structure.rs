@@ -44,13 +44,18 @@ impl From<chrono::format::ParseError> for Error {
 
 //  --- Trait definitions and blanket implementations ---
 
-/// Requirement for a type to be classified as a curve.
-pub trait Curve<A, B = A> {
+/// Requirement for a type to be classified as a term structure.
+pub trait TermStructure<A, B = A> {
     /// Return 'key' field of Curve.
     fn get_x(&self) -> Vec<A>;
 
     /// Return 'value' field of Curve.
     fn get_y(&self) -> Vec<B>;
+
+    /// Returns a tuple containing the 'key' and 'value' field.
+    fn unpack(&self) -> (Vec<A>, Vec<B>) {
+        (self.get_x(), self.get_y())
+    }
 
     /// Map 'key' field using a closure.
     fn map_x<F>(&self, closure: F) -> Vec<A>
@@ -66,6 +71,24 @@ pub trait Curve<A, B = A> {
         F: Fn(&B) -> B,
     {
         self.get_y().iter().map(closure).collect::<Vec<B>>()
+    }
+
+    /// Returns a tuple containing the 'key' and 'value' field.
+    /// Where the 'key' is mapped using a closure.
+    fn unpack_with_map_x<F>(&self, closure: F) -> (Vec<A>, Vec<B>)
+    where
+        F: Fn(&A) -> A,
+    {
+        (self.map_x(closure), self.get_y())
+    }
+
+    /// Returns a tuple containing the 'key' and 'value' field.
+    /// Where the 'value' is mapped using a closure.
+    fn unpack_with_map_y<F>(&self, closure: F) -> (Vec<A>, Vec<B>)
+    where
+        F: Fn(&B) -> B,
+    {
+        (self.get_x(), self.map_y(closure))
     }
 
     /// Map 'key' field using a closure, returing Result.
@@ -91,6 +114,26 @@ pub trait Curve<A, B = A> {
             .map(closure)
             .collect::<Result<Vec<C>, E>>()
     }
+
+    /// Returns a tuple containing the 'key' and 'value' field.
+    /// Where the 'key' is mapped using a closure, returing a result.
+    fn unpack_with_try_map_x<F, E>(&self, closure: F) -> Result<(Vec<A>, Vec<B>), E>
+    where
+        F: Fn(&A) -> Result<A, E>,
+        Error: From<E>,
+    {
+        Ok((self.try_map_x(closure)?, self.get_y()))
+    }
+
+    /// Returns a tuple containing the 'key' and 'value' field.
+    /// Where the 'value' is mapped using a closure, returing a result.
+    fn unpack_with_try_map_y<F, E>(&self, closure: F) -> Result<(Vec<A>, Vec<B>), E>
+    where
+        F: Fn(&B) -> Result<B, E>,
+        Error: From<E>,
+    {
+        Ok((self.get_x(), self.try_map_y(closure)?))
+    }
 }
 
 //  --- Default curve type construction ---
@@ -113,7 +156,7 @@ where
     }
 }
 
-impl<A, B> Curve<A, B> for CurveParameters<A, B>
+impl<A, B> TermStructure<A, B> for CurveParameters<A, B>
 where
     A: Clone,
     B: Clone,

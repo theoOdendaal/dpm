@@ -7,8 +7,8 @@ use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::DayCountConventions;
 use dpm::core::sequence::Sequence;
 
-use dpm::core::curves::{Curve, CurveParameters};
 use dpm::interest::ops::InterestFraction;
+use dpm::interest::term_structure::{CurveParameters, TermStructure};
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{self, Interpolate};
 use dpm::resources::holidays;
@@ -41,14 +41,12 @@ fn main() {
     let path = "src/resources/curves";
     let dir = format!("{}/zar_disc_csa.txt", path);
     let contents = std::fs::read_to_string(dir).unwrap();
-
     let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
     let curve: CurveParameters<f64> = curve.into();
 
-    let x = curve.map_x(|a| a / 365.0);
-    let y = curve.get_y();
+    let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
 
-    let discount_factors = interpolation::LogLinear::interpolate(&x, &y, &discount_fractions);
+    let discount_factors = interpolation::Exponential::interpolate(&x, &y, &discount_fractions);
 
     let mut forward_rates: Vec<f64> = discount_factors
         .iter()

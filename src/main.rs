@@ -1,8 +1,6 @@
 // TODO, use &[T] rather than &Vec<T>.
 // TODO, implement CLI functionality.
 
-use chrono::{Months, NaiveDate};
-
 // 1.
 // Distinguish between 'static' and 'market data'.
 // 'Static' is contractual data, where 'market data' is curves, rates etc.
@@ -11,28 +9,28 @@ use chrono::{Months, NaiveDate};
 // 2.
 // Refer to ISDA definitions for terminology/'jargon'.
 
+// 3.
+// All functions should take Vec<f64> as self.
+
+// TODO, all new functions should be 'const'.
+
+use dpm::interest::compounding::{
+    DiscreteCompoundingFrequencies, InterestConventions, TimeValueOfMoney,
+};
+
 fn main() {
-    let start = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
-    let end = NaiveDate::from_ymd_opt(2025, 12, 31).unwrap();
-    let step = Months::new(5);
+    let conv2 = InterestConventions::Simple;
+    let conv1 = InterestConventions::Simple;
 
-    //let start = 1;
-    //let end = 10;
-    //let step = 12;
+    let r = 0.06;
+    let n = 1.2;
 
-    let res = std::iter::successors(Some(end), move |&x| {
-        if (start + step) < x {
-            let next = x - step;
-            Some(next)
-        } else if x > start {
-            Some(start)
-        } else {
-            None
-        }
-    });
+    let fv_1 = conv1.fv(&n, &r);
+    let pv_1 = conv1.pv(&n, &r);
+    let r_2 = conv2.rate(&n, &pv_1);
+    let fv_2 = conv2.fv(&n, &r_2);
+    let pv_2 = conv2.pv(&n, &r_2);
 
-    let test: Vec<NaiveDate> = res.collect();
-    //test.reverse();
-
-    println!("{:?}", test);
+    dbg!(&pv_1);
+    dbg!(&pv_2);
 }

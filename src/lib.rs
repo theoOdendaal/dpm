@@ -5,12 +5,13 @@ pub mod conventions {
 }
 
 pub mod core {
-    pub mod curves;
     pub mod sequence;
 }
 
 pub mod interest {
+    pub mod compounding;
     pub mod ops;
+    pub mod term_structure;
     pub mod types;
 }
 
@@ -30,4 +31,8 @@ pub mod math {
 
 pub mod resources {
     pub mod holidays;
+}
+
+pub mod time {
+    pub mod periods;
 }

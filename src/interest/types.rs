@@ -54,30 +54,3 @@ pub enum RateTypes {
     Spot,
     Forward,
 }
-
-//  --- Compounding frequencies ---
-pub enum CompoundingFrequencies {
-    Weekly,
-    Monthly,
-    BiMonthly,
-    Quarterly,
-    TriAnnually,
-    SemiAnnually,
-    Annually,
-    Continious,
-}
-
-impl From<CompoundingFrequencies> for f64 {
-    fn from(value: CompoundingFrequencies) -> Self {
-        match value {
-            CompoundingFrequencies::Weekly => 52.0,
-            CompoundingFrequencies::Monthly => 12.0,
-            CompoundingFrequencies::BiMonthly => 6.0,
-            CompoundingFrequencies::Quarterly => 4.0,
-            CompoundingFrequencies::TriAnnually => 3.0,
-            CompoundingFrequencies::SemiAnnually => 2.0,
-            CompoundingFrequencies::Annually => 1.0,
-            CompoundingFrequencies::Continious => 99999.0,
-        }
-    }
-}
