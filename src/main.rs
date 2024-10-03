@@ -20,10 +20,10 @@ use dpm::interest::compounding::{
 
 fn main() {
     let conv2 = InterestConventions::Simple;
-    let conv1 = InterestConventions::Simple;
+    let conv1 = InterestConventions::Continuous;
 
     let r = 0.06;
-    let n = 1.2;
+    let n = 1.3;
 
     let fv_1 = conv1.fv(&n, &r);
     let pv_1 = conv1.pv(&n, &r);
@@ -31,6 +31,6 @@ fn main() {
     let fv_2 = conv2.fv(&n, &r_2);
     let pv_2 = conv2.pv(&n, &r_2);
 
-    dbg!(&pv_1);
-    dbg!(&pv_2);
+    dbg!(&r);
+    dbg!(&r_2);
 }

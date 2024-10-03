@@ -23,9 +23,6 @@ struct Discrete(DiscreteCompoundingFrequencies);
 struct Continuous;
 
 pub trait TimeValueOfMoney<A, B = A, C = A> {
-    /// Expresses parameter A as a negative.
-    fn to_negative(n: &A) -> A;
-
     /// Calculates the future value factor.
     fn fv(&self, n: &A, r: &B) -> C;
 
@@ -38,9 +35,7 @@ pub trait TimeValueOfMoney<A, B = A, C = A> {
     //fn convert_to(&self, other: Self, n: &A, r: &B) -> (InterestConventions, C);
 
     /// Calculates the present value factor.
-    fn pv(&self, n: &A, r: &B) -> C {
-        self.fv(&Self::to_negative(n), r)
-    }
+    fn pv(&self, n: &A, r: &B) -> C;
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -89,12 +84,12 @@ impl TryFrom<f64> for DiscreteCompoundingFrequencies {
 
 //  --- Concrete implementations ---
 impl TimeValueOfMoney<f64> for Simple {
-    fn to_negative(n: &f64) -> f64 {
-        -n
-    }
-
     fn fv(&self, n: &f64, r: &f64) -> f64 {
         1.0 + r * n
+    }
+
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        1.0 / self.fv(n, r)
     }
 
     fn interest(&self, n: &f64, r: &f64) -> f64 {
@@ -104,20 +99,16 @@ impl TimeValueOfMoney<f64> for Simple {
     fn rate(&self, n: &f64, pv: &f64) -> f64 {
         ((1.0 / pv) - 1.0) / n
     }
-
-    fn pv(&self, n: &f64, r: &f64) -> f64 {
-        1.0 / self.fv(n, r)
-    }
 }
 
 impl TimeValueOfMoney<f64> for Discrete {
-    fn to_negative(n: &f64) -> f64 {
-        -n
-    }
-
     fn fv(&self, n: &f64, r: &f64) -> f64 {
         let m: f64 = self.0.into();
         (1.0 + r / m).powf(n * m)
+    }
+
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(&-n, r)
     }
 
     fn interest(&self, n: &f64, r: &f64) -> f64 {
@@ -131,12 +122,12 @@ impl TimeValueOfMoney<f64> for Discrete {
 }
 
 impl TimeValueOfMoney<f64> for Continuous {
-    fn to_negative(n: &f64) -> f64 {
-        -n
-    }
-
     fn fv(&self, n: &f64, r: &f64) -> f64 {
         std::f64::consts::E.powf(r * n)
+    }
+
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(&-n, r)
     }
 
     fn interest(&self, n: &f64, r: &f64) -> f64 {
@@ -149,15 +140,19 @@ impl TimeValueOfMoney<f64> for Continuous {
 }
 
 impl TimeValueOfMoney<f64> for InterestConventions {
-    fn to_negative(n: &f64) -> f64 {
-        -n
-    }
-
     fn fv(&self, n: &f64, r: &f64) -> f64 {
         match self {
             Self::Simple => Simple.fv(n, r),
             Self::Discrete(x) => Discrete(*x).fv(n, r),
             Self::Continuous => Continuous.fv(n, r),
+        }
+    }
+
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.pv(n, r),
+            Self::Discrete(x) => Discrete(*x).pv(n, r),
+            Self::Continuous => Continuous.pv(n, r),
         }
     }
 
@@ -183,12 +178,12 @@ impl<A> TimeValueOfMoney<Vec<A>, A> for A
 where
     A: TimeValueOfMoney<A, A, A> + std::ops::Neg<Output = A> + Clone,
 {
-    fn to_negative(n: &Vec<A>) -> Vec<A> {
-        n.iter().map(|a| -a.clone()).collect()
-    }
-
     fn fv(&self, n: &Vec<A>, r: &A) -> Vec<A> {
         n.iter().map(|a| self.fv(a, r)).collect()
+    }
+
+    fn pv(&self, n: &Vec<A>, r: &A) -> Vec<A> {
+        n.iter().map(|a| self.pv(&(-a.clone()), r)).collect()
     }
 
     fn interest(&self, n: &Vec<A>, r: &A) -> Vec<A> {
@@ -204,12 +199,12 @@ impl<A> TimeValueOfMoney<Vec<A>> for A
 where
     A: TimeValueOfMoney<A, A, A> + std::ops::Neg<Output = A> + Clone,
 {
-    fn to_negative(n: &Vec<A>) -> Vec<A> {
-        n.iter().map(|a| -a.clone()).collect()
-    }
-
     fn fv(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
         n.iter().zip(r.iter()).map(|(a, b)| self.fv(a, b)).collect()
+    }
+
+    fn pv(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
+        n.iter().zip(r.iter()).map(|(a, b)| self.pv(a, b)).collect()
     }
 
     fn interest(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
@@ -224,5 +219,35 @@ where
             .zip(pv.iter())
             .map(|(a, b)| self.pv(a, b))
             .collect()
+    }
+}
+
+//  --- Tests ---
+#[cfg(test)]
+mod test_interest_ops {
+
+    use super::*;
+    use crate::assert_approx_eq;
+
+    #[test]
+    fn test_rate_simple() {
+        let rate = 0.06;
+        let n = 1.33;
+        let convention = Simple;
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        assert_approx_eq!(rate, inferred_rate)
+    }
+
+    #[test]
+    fn test_rate_discrete_12() {
+        let rate = 0.06;
+        let n = 1.33;
+        let convention = Discrete(DiscreteCompoundingFrequencies::Annually);
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        assert_approx_eq!(rate, inferred_rate)
     }
 }
