@@ -22,7 +22,7 @@ use dpm::core::solver::NewtonRaphson;
 
 fn main() {
     // Forward rate solver.
-    let first = (90.0, 0.982262730598449);
+    let first = (90.0 / 365.0, 0.982262730598449);
     let second = (181.0 / 365.0, 0.962226033210754);
     let convention = InterestConventions::Simple;
     let f = discount_to_forward(&convention, &first, &second);
