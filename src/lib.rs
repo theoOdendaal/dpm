@@ -26,7 +26,6 @@ pub mod macros {
 
 pub mod math {
     pub mod interpolation;
-    pub mod tvm;
 }
 
 pub mod resources {

@@ -38,10 +38,17 @@
 // Defintiion ------------------------
 // Swap rate: The fixed interest rate exchanged for a floating rate in an
 // interest rate swap agreement.
+
 // Spot rate: The current interest rate for a zero-coupon bond maturing
 // at a specified future date.
+
 // Discount factor: A multiplier used to determine the present value of
 // future cash flows reflecting the time value of money.
+
+// Par rate: The par rate is the coupon rate on a bond that makes the
+// bond's price equal to its face value (par value). In other words,
+// it is the interest rate that ensures the bond trades at par.
+// Solve for discount rate that gives a PV of 1 ?
 
 // Comments --------------------------
 // Spot rates is the effective rate assuming a constant rate is applied over the contract term. i.e. looked at in isolation.
@@ -58,14 +65,39 @@ pub enum RateTypes {
     Discount,
     Spot(InterestConventions),
     Forward(InterestConventions),
-    Par,
+    Par(InterestConventions),
 }
 
 struct Swap(InterestConventions);
 struct Discount;
 struct Spot(InterestConventions);
 struct Forward(InterestConventions);
-struct Par;
+struct Par(InterestConventions);
+
+// fn swap_to_discount
+// fn swap_to_spot
+// fn swap_to_forward
+// fn swap_to_par
+
+// fn discount_to_swap
+// fn discount_to_spot
+// fn discount_to_forward
+// fn discount_to_par
+
+// fn spot_to_swap
+// fn spot_to_discount
+// fn spot_to_forward
+// fn spot_to_par
+
+// fn forward_to_swap
+// fn forward_to_discount
+// fn forward_to_spot
+// fn forward_to_par
+
+// fn par_to_swap
+// fn par_to_discount
+// fn par_to_spot
+// fn par_to_forward
 
 fn discount_to_spot(convention: &InterestConventions, n: &f64, discount_rate: &f64) -> f64 {
     convention.rate(n, discount_rate)
