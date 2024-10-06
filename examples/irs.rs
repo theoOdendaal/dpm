@@ -7,7 +7,7 @@ use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::DayCountConventions;
 use dpm::core::sequence::Sequence;
 
-use dpm::interest::ops::InterestFraction;
+use dpm::interest::ops::{DiscreteCompoundingFrequencies, InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{CurveParameters, TermStructure};
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{self, Interpolate};
@@ -68,17 +68,35 @@ fn main() {
         .map(|a| if a <= &0.0 { spot } else { *a })
         .collect();
 
+    let interest_rate_convention = InterestConventions::Simple;
+
     let interest_rate_fractions1 =
-        f64::simple_interest_fraction(&interest_fractions, &forward_rates1);
+        interest_rate_convention.interest(&interest_fractions, &forward_rates1);
 
     let interest_rate_fractions2 =
-        f64::simple_interest_fraction(&interest_fractions, &forward_rates2);
+        interest_rate_convention.interest(&interest_fractions, &forward_rates2);
 
-    let seq_int1 = f64::with_nominal(&nominal, &interest_rate_fractions1);
-    let seq_int2 = f64::with_nominal(&nominal, &interest_rate_fractions2);
+    // Create a wrapper for this iterations, potentiall embed with the interest::ops.rs module.
+    let seq_int1: Vec<f64> = interest_rate_fractions1
+        .iter()
+        .map(|a| a * nominal)
+        .collect();
+    let seq_int2: Vec<f64> = interest_rate_fractions2
+        .iter()
+        .map(|a| a * nominal)
+        .collect();
 
-    let present_values1 = f64::with_nominal(&seq_int1, &discount_factors);
-    let present_values2 = f64::with_nominal(&seq_int2, &discount_factors);
+    let present_values1: Vec<f64> = seq_int1
+        .iter()
+        .zip(discount_factors.iter())
+        .map(|(a, b)| a * b)
+        .collect();
+
+    let present_values2: Vec<f64> = seq_int2
+        .iter()
+        .zip(discount_factors.iter())
+        .map(|(a, b)| a * b)
+        .collect();
 
     let pv1_sum = present_values1.iter().sum::<f64>();
     let pv2_sum = present_values2.iter().sum::<f64>();

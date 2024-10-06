@@ -15,6 +15,34 @@ pub enum DayCountConventions {
     NonLeap365,
 }
 
+/*
+Day count conventions from Refinitiv:
+30/360
+30/360 US
+30/360 GER
+30/360 ISDA
+30/365 ISDA
+30/365 GER
+30/365 BRA
+30/Actual GER
+30/Actual
+30/Actual ISDA
+30E/360 ISMA
+Actual/360
+Actual/364
+Actual/365
+Actual/Actual
+Actual/Actual ISDA
+Actual/Actual AFB
+WorkingDays/252
+Actual/365LP
+Actual/365P
+ActualLeapDay/365
+ActualLeapDay/360
+Actual/36525
+Actual/Actual CAD Convention
+*/
+
 impl Default for DayCountConventions {
     fn default() -> Self {
         Self::Actual365Fixed

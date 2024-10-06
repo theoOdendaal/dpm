@@ -5,7 +5,8 @@
 //! Swap rate:
 //! Discount factor:
 //! Forward rate:
-// FIXME continue with documentation.
+//! Par rate:
+// FIXME continue with documentation!
 
 //! Formulae
 //! DISCOUNT VS SWAP : (S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^nm.Dfn = 1 (where S = Swap rate, and Df = Discount factors)
@@ -48,9 +49,74 @@
 // ^ Therefore, when calculating the discount factor using swap rates, you should consider previous discount factors,
 // while calculating the discount factor using the spot rates, you only use a single rate.
 
+use super::ops::{InterestConventions, TimeValueOfMoney};
+
+// TODO implement solver, similar to Excel to assit with conversion.
+
 pub enum RateTypes {
-    Swap,
+    Swap(InterestConventions),
     Discount,
-    Spot,
-    Forward,
+    Spot(InterestConventions),
+    Forward(InterestConventions),
+    Par,
+}
+
+struct Swap(InterestConventions);
+struct Discount;
+struct Spot(InterestConventions);
+struct Forward(InterestConventions);
+struct Par;
+
+fn discount_to_spot(convention: &InterestConventions, n: &f64, discount_rate: &f64) -> f64 {
+    convention.rate(n, discount_rate)
+}
+
+fn spot_to_discount(convention: &InterestConventions, n: &f64, spot_rate: &f64) -> f64 {
+    convention.pv(n, spot_rate)
+}
+
+// Where &(x, y) = (n, r).
+pub fn spot_to_forward(
+    convention: &InterestConventions,
+    short: &(f64, f64),
+    long: &(f64, f64),
+) -> f64 {
+    let (short_n, short_r) = short;
+    let (long_n, long_r) = long;
+    let short_pv = convention.pv(short_n, short_r);
+    let long_pv = convention.pv(long_n, long_r);
+    convention.rate(&(long_n - short_n), &(long_pv / short_pv))
+}
+
+// Solve for the rate at each point, and then pass to spot_to_forward fn?
+// Where &(x, y) = (n, df).
+pub fn discount_to_forward(
+    convention: &InterestConventions,
+    short: &(f64, f64),
+    long: &(f64, f64),
+) -> f64 {
+    let (short_n, short_df) = short;
+    let (long_n, long_df) = long;
+    convention.rate(&(long_n - short_n), &(long_df / short_df))
+}
+
+//(S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^nm.Dfn = 1
+// Returns the result of the above.
+pub fn discount_to_swap_check(swap_rate: &f64, n: &[f64], m: &f64, df: &[f64]) -> f64 {
+    assert_eq!(n.len(), df.len());
+
+    let mut iter = n.iter().zip(df.iter()).peekable();
+
+    let value: f64 = std::iter::from_fn(|| {
+        iter.next().map(|(a, b)| {
+            if iter.peek().is_none() {
+                ((1.0 + swap_rate / m).powf(a * m)) * b
+            } else {
+                ((swap_rate / m).powf(a * m)) * b
+            }
+        })
+    })
+    .sum();
+
+    value
 }

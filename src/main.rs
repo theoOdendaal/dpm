@@ -12,25 +12,55 @@
 // 3.
 // All functions should take Vec<f64> as self.
 
+use dpm::interest::ops::InterestConventions;
 // TODO, all new functions should be 'const'.
+//use dpm::core::solver::{self, SolveEquation};
+//use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
+use dpm::interest::types::{discount_to_forward, discount_to_swap_check, spot_to_forward};
 
-use dpm::interest::compounding::{
-    DiscreteCompoundingFrequencies, InterestConventions, TimeValueOfMoney,
-};
+use dpm::core::solver::NewtonRaphson;
 
 fn main() {
-    let conv2 = InterestConventions::Simple;
-    let conv1 = InterestConventions::Continuous;
+    // Forward rate solver.
+    let first = (90.0, 0.982262730598449);
+    let second = (181.0 / 365.0, 0.962226033210754);
+    let convention = InterestConventions::Simple;
+    let f = discount_to_forward(&convention, &first, &second);
 
-    let r = 0.06;
-    let n = 1.3;
+    println!("{:?}", f);
 
-    let fv_1 = conv1.fv(&n, &r);
-    let pv_1 = conv1.pv(&n, &r);
-    let r_2 = conv2.rate(&n, &pv_1);
-    let fv_2 = conv2.fv(&n, &r_2);
-    let pv_2 = conv2.pv(&n, &r_2);
+    // Swap rate solver.
+    /*
+    let df = [0.996489, 0.991306, 0.984494, 0.975616, 0.964519];
+    let n = [0.5, 0.5, 0.5, 0.5, 0.5];
+    let df = &df[..5];
+    let n = &n[..df.len()];
+    let m = 11.0;
+    let close = |a: f64| discount_to_swap_check(&a, n, &m, df);
+    let res_1 = f64::solve(&0.0, close);
+    dbg!(res_1);
+    dbg!(discount_to_swap_check(&res_1, n, &m, df));
+    */
 
-    dbg!(&r);
-    dbg!(&r_2);
+    // Solver.
+    /*
+    let n = 0.75;
+    let comp = dpm::interest::ops::DiscreteCompoundingFrequencies::Annually;
+    let m: f64 = comp.into();
+
+    let f_closure: Box<dyn Fn(&f64) -> f64 + '_> =
+        Box::new(move |a: &f64| (1.0 + a / m).powf(n * m));
+
+    let b_closure: Box<dyn Fn(&f64) -> f64 + '_> =
+        Box::new(move |a: &f64| (n * m) * (1.0 + a / m).powf((n * m) - 1.0));
+
+    let target = 1.12;
+
+    let res = solver::Discrete::solve(&f_closure, &b_closure, &target);
+    println!("{:?}", res);
+
+    let res_2 = InterestConventions::Discrete(comp);
+    let res_2 = res_2.fv(&n, &res);
+    println!("{:?}", res_2);
+    */
 }

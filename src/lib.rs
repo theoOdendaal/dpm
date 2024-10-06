@@ -6,10 +6,10 @@ pub mod conventions {
 
 pub mod core {
     pub mod sequence;
+    pub mod solver;
 }
 
 pub mod interest {
-    pub mod compounding;
     pub mod ops;
     pub mod term_structure;
     pub mod types;

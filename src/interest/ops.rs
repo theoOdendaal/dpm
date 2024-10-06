@@ -1,264 +1,436 @@
-//! Interest calculation conventions.
+//  --- Compounding frequencies ---
 
-// TODO, implement compounding frequencies (including conversion).
-// TODO implement unit tests.
-// TODO add documentations.
-// TODO Cleanup this module.
+// TODO improve error handling.
+// TODO rename this module to ops, once logic has been transferred.
+// TODO add more unit tests.
+// TODO add unit tests for vec's. Specifically for the pv tests.
+// TODO transfer interest::types.rs content to this module. interest module should contain only 'ops' and 'term_structure'.
 
-// FutureValue impl for type will automatically allow use of PresentValue and InterestFraction trait.
+// FIXME, double check logic.
+
+// Converting between interest conventions:
+// 1. Use the pv function of the current convention.
+// 2. Use the pv calculated in step 1, as an argument in the rate fn called using the desired convention.
+// ex.
+// let rate = 0.06;
+// let n = 1.2;
+// let pv = Simple.pv(&n, &r);
+// let new_rate = continuous.rate(&n, &pv);
 
 //  --- Errors ---
-// TODO Imple the required logic for this Error enum, and incorporate in code.
 pub enum Error {
-    MismatchedLengths,
+    Invalidf64,
 }
 
-// TODO implement error handling, specifically for zip iterations. Ensure vec's are of similar length.
-
-//  --- Trait definition ---
-
-// FIXME Should the PresentValue, FutureValue and InterestFraction traits not be combined into a single trait as below?
-
-pub trait ToNegative {
-    fn to_negative(&self) -> Self;
+/// Interest calculation conventions.
+pub enum InterestConventions {
+    Simple,
+    Discrete(DiscreteCompoundingFrequencies),
+    Continuous,
 }
 
-pub trait FutureValue<A, B, C = A> {
-    fn simple_fv_fraction(n: &A, r: &B) -> C;
-
-    fn discrete_fv_fraction(n: &A, r: &B, m: &f64) -> C;
-
-    fn continuous_fv_fraction(n: &A, r: &B) -> C;
-
-    fn sub_pv(fv: &C, pv: &f64) -> C;
+#[derive(Copy, Clone, Debug)]
+pub enum DiscreteCompoundingFrequencies {
+    Weekly,
+    Monthly,
+    BiMonthly,
+    Quarterly,
+    TriAnnually,
+    SemiAnnually,
+    Annually,
 }
 
-// To be used to derive discount factors.
-pub trait PresentValue<A, B, C = A>: FutureValue<A, B, C>
-where
-    A: ToNegative,
-{
-    fn simple_pv_fraction(n: &A, r: &B) -> C;
+// InterestConventions structs.
+struct Simple;
+struct Discrete(DiscreteCompoundingFrequencies);
+struct Continuous;
 
-    fn discrete_pv_fraction(n: &A, r: &B, m: &f64) -> C;
+pub trait TimeValueOfMoney<A, B = A, C = A> {
+    /// Calculates the future value factor.
+    fn fv(&self, n: &A, r: &B) -> C;
 
-    fn continuous_pv_fraction(n: &A, r: &B) -> C;
+    /// Calculates the present value factor.
+    fn pv(&self, n: &A, r: &B) -> C;
+
+    /// Calculates the interest factor.
+    fn interest(&self, n: &A, r: &B) -> C;
+
+    /// Infers the interest rate.
+    fn rate(&self, n: &A, pv: &B) -> C;
 }
+//  --- Standard library trait implementations ---
 
-// To be used for interest.
-pub trait InterestFraction<A, B, C = A>: FutureValue<A, B, C> {
-    fn simple_interest_fraction(n: &A, r: &B) -> C;
-
-    fn discrete_interest_fraction(n: &A, r: &B, m: &f64) -> C;
-
-    fn continuous_interest_fraction(n: &A, r: &B) -> C;
-
-    // TODO, call this something else more descriptive.
-    fn with_nominal(pv: &A, frac: &B) -> C {
-        Self::simple_interest_fraction(pv, frac)
+impl From<DiscreteCompoundingFrequencies> for f64 {
+    fn from(value: DiscreteCompoundingFrequencies) -> Self {
+        match value {
+            DiscreteCompoundingFrequencies::Weekly => 52.0,
+            DiscreteCompoundingFrequencies::Monthly => 12.0,
+            DiscreteCompoundingFrequencies::BiMonthly => 6.0,
+            DiscreteCompoundingFrequencies::Quarterly => 4.0,
+            DiscreteCompoundingFrequencies::TriAnnually => 3.0,
+            DiscreteCompoundingFrequencies::SemiAnnually => 2.0,
+            DiscreteCompoundingFrequencies::Annually => 1.0,
+        }
     }
 }
 
-// Infer interest rate from present value.
-// Rate conversions can be performed by first calculating
-// the FutureValue using the old rate, and then using that
-// FutureValue in the InferRate logic.
-pub trait InferRate<A, B, C = A> {
-    fn infer_simple_rate(pv: &A, n: &B) -> C;
+impl TryFrom<f64> for DiscreteCompoundingFrequencies {
+    type Error = Error;
 
-    fn infer_discrete_rate(pv: &A, n: &B, m: &f64) -> C;
-
-    fn infer_continious_rate(pv: &A, n: &B) -> C;
-}
-
-//  --- Trait implementations: ToNegative ---
-
-impl ToNegative for f64 {
-    fn to_negative(&self) -> Self {
-        -self
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        match value as u32 {
+            52 => Ok(DiscreteCompoundingFrequencies::Weekly),
+            12 => Ok(DiscreteCompoundingFrequencies::Monthly),
+            6 => Ok(DiscreteCompoundingFrequencies::BiMonthly),
+            4 => Ok(DiscreteCompoundingFrequencies::Quarterly),
+            3 => Ok(DiscreteCompoundingFrequencies::TriAnnually),
+            2 => Ok(DiscreteCompoundingFrequencies::SemiAnnually),
+            1 => Ok(DiscreteCompoundingFrequencies::Annually),
+            _ => Err(Error::Invalidf64), // TODO fix this leg.
+        }
     }
 }
 
-impl ToNegative for Vec<f64> {
-    fn to_negative(&self) -> Self {
-        self.iter().map(|a| -a).collect()
-    }
-}
+//  --- Concrete trait implementations ---
 
-//  --- Trait implementations: FutureValue ---
-impl FutureValue<f64, f64> for f64 {
-    fn simple_fv_fraction(n: &f64, r: &f64) -> f64 {
+impl TimeValueOfMoney<f64> for Simple {
+    fn fv(&self, n: &f64, r: &f64) -> f64 {
         1.0 + r * n
     }
 
-    fn discrete_fv_fraction(n: &f64, r: &f64, m: &f64) -> f64 {
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        1.0 / self.fv(n, r)
+    }
+
+    fn interest(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(n, r) - 1.0
+    }
+
+    fn rate(&self, n: &f64, pv: &f64) -> f64 {
+        ((1.0 / pv) - 1.0) / n
+    }
+}
+
+impl TimeValueOfMoney<f64> for Discrete {
+    fn fv(&self, n: &f64, r: &f64) -> f64 {
+        let m: f64 = self.0.into();
         (1.0 + r / m).powf(n * m)
     }
 
-    fn continuous_fv_fraction(n: &f64, r: &f64) -> f64 {
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(&-n, r)
+    }
+
+    fn interest(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(n, r) - 1.0
+    }
+
+    fn rate(&self, n: &f64, pv: &f64) -> f64 {
+        let m: f64 = self.0.into();
+        ((1.0 / pv).powf(1.0 / (n * m)) - 1.0) * m
+    }
+}
+
+impl TimeValueOfMoney<f64> for Continuous {
+    fn fv(&self, n: &f64, r: &f64) -> f64 {
         std::f64::consts::E.powf(r * n)
     }
 
-    fn sub_pv(fv: &f64, pv: &f64) -> f64 {
-        fv - pv
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(&-n, r)
+    }
+
+    fn interest(&self, n: &f64, r: &f64) -> f64 {
+        self.fv(n, r) - 1.0
+    }
+
+    fn rate(&self, n: &f64, pv: &f64) -> f64 {
+        (1.0 / pv).ln() / n
     }
 }
 
-impl FutureValue<Vec<f64>, f64> for f64 {
-    fn simple_fv_fraction(n: &Vec<f64>, r: &f64) -> Vec<f64> {
-        n.iter().map(|a| f64::simple_fv_fraction(a, r)).collect()
+impl TimeValueOfMoney<f64> for InterestConventions {
+    fn fv(&self, n: &f64, r: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.fv(n, r),
+            Self::Discrete(x) => Discrete(*x).fv(n, r),
+            Self::Continuous => Continuous.fv(n, r),
+        }
     }
 
-    fn discrete_fv_fraction(n: &Vec<f64>, r: &f64, m: &f64) -> Vec<f64> {
-        n.iter()
-            .map(|a| f64::discrete_fv_fraction(a, r, m))
-            .collect()
+    fn pv(&self, n: &f64, r: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.pv(n, r),
+            Self::Discrete(x) => Discrete(*x).pv(n, r),
+            Self::Continuous => Continuous.pv(n, r),
+        }
     }
 
-    fn continuous_fv_fraction(n: &Vec<f64>, r: &f64) -> Vec<f64> {
-        n.iter()
-            .map(|a| f64::continuous_fv_fraction(a, r))
-            .collect()
+    fn interest(&self, n: &f64, r: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.interest(n, r),
+            Self::Discrete(x) => Discrete(*x).interest(n, r),
+            Self::Continuous => Continuous.interest(n, r),
+        }
     }
 
-    fn sub_pv(fv: &Vec<f64>, pv: &f64) -> Vec<f64> {
-        fv.iter().map(|a| a - pv).collect()
-    }
-}
-
-impl FutureValue<f64, Vec<f64>, Vec<f64>> for f64 {
-    fn simple_fv_fraction(n: &f64, r: &Vec<f64>) -> Vec<f64> {
-        r.iter().map(|a| f64::simple_fv_fraction(n, a)).collect()
-    }
-
-    fn discrete_fv_fraction(n: &f64, r: &Vec<f64>, m: &f64) -> Vec<f64> {
-        r.iter()
-            .map(|a| f64::discrete_fv_fraction(n, a, m))
-            .collect()
-    }
-
-    fn continuous_fv_fraction(n: &f64, r: &Vec<f64>) -> Vec<f64> {
-        r.iter()
-            .map(|a| f64::continuous_fv_fraction(n, a))
-            .collect()
-    }
-
-    fn sub_pv(fv: &Vec<f64>, pv: &f64) -> Vec<f64> {
-        fv.iter().map(|a| a - pv).collect()
+    fn rate(&self, n: &f64, pv: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.rate(n, pv),
+            Self::Discrete(x) => Discrete(*x).rate(n, pv),
+            Self::Continuous => Continuous.rate(n, pv),
+        }
     }
 }
 
-impl FutureValue<Vec<f64>, Vec<f64>> for f64 {
-    fn simple_fv_fraction(n: &Vec<f64>, r: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(n.len(), r.len());
+//  --- Blanket trati implementations ---
 
-        n.iter()
-            .zip(r.iter())
-            .map(|(a, b)| f64::simple_fv_fraction(a, b))
-            .collect()
-    }
-
-    fn discrete_fv_fraction(n: &Vec<f64>, r: &Vec<f64>, m: &f64) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(n.len(), r.len());
-        n.iter()
-            .zip(r.iter())
-            .map(|(a, b)| f64::discrete_fv_fraction(a, b, m))
-            .collect()
-    }
-
-    fn continuous_fv_fraction(n: &Vec<f64>, r: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(n.len(), r.len());
-        n.iter()
-            .zip(r.iter())
-            .map(|(a, b)| f64::continuous_fv_fraction(a, b))
-            .collect()
-    }
-
-    fn sub_pv(fv: &Vec<f64>, pv: &f64) -> Vec<f64> {
-        fv.iter().map(|a| a - pv).collect()
-    }
-}
-
-//  --- Trait implementations: InferRateFromFutureValue ---
-impl InferRate<f64, f64> for f64 {
-    fn infer_simple_rate(pv: &f64, n: &f64) -> f64 {
-        (1.0 - pv) / (pv * n)
-    }
-
-    fn infer_discrete_rate(pv: &f64, n: &f64, m: &f64) -> f64 {
-        ((1.0 - pv).powf(1.0 / (n * m)) - 1.0) * m
-    }
-
-    fn infer_continious_rate(pv: &f64, n: &f64) -> f64 {
-        (1.0 / n) * ((1.0 / pv).ln())
-    }
-}
-
-impl InferRate<Vec<f64>, Vec<f64>> for f64 {
-    fn infer_simple_rate(pv: &Vec<f64>, n: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(pv.len(), n.len());
-        pv.iter()
-            .zip(n.iter())
-            .map(|(a, b)| f64::infer_simple_rate(a, b))
-            .collect()
-    }
-
-    fn infer_discrete_rate(pv: &Vec<f64>, n: &Vec<f64>, m: &f64) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(pv.len(), n.len());
-        pv.iter()
-            .zip(n.iter())
-            .map(|(a, b)| f64::infer_discrete_rate(a, b, m))
-            .collect()
-    }
-
-    fn infer_continious_rate(pv: &Vec<f64>, n: &Vec<f64>) -> Vec<f64> {
-        // TODO, refactor assert_eq.
-        assert_eq!(pv.len(), n.len());
-        pv.iter()
-            .zip(n.iter())
-            .map(|(a, b)| f64::infer_continious_rate(a, b))
-            .collect()
-    }
-}
-
-//  --- Implementations: Blanket ---
-
-impl<A, B, C, D> PresentValue<A, B, C> for D
+impl<A, B> TimeValueOfMoney<Vec<A>, A> for B
 where
-    A: ToNegative,
-    D: FutureValue<A, B, C>,
+    A: std::ops::Neg<Output = A>,
+    B: TimeValueOfMoney<A>,
 {
-    fn simple_pv_fraction(n: &A, r: &B) -> C {
-        D::simple_fv_fraction(&n.to_negative(), r)
+    fn fv(&self, n: &Vec<A>, r: &A) -> Vec<A> {
+        n.iter().map(|a| self.fv(a, r)).collect()
     }
 
-    fn discrete_pv_fraction(n: &A, r: &B, m: &f64) -> C {
-        D::discrete_fv_fraction(&n.to_negative(), r, m)
+    fn pv(&self, n: &Vec<A>, r: &A) -> Vec<A> {
+        n.iter().map(|a| self.pv(a, r)).collect()
     }
 
-    fn continuous_pv_fraction(n: &A, r: &B) -> C {
-        D::continuous_fv_fraction(&n.to_negative(), r)
+    fn interest(&self, n: &Vec<A>, r: &A) -> Vec<A> {
+        n.iter().map(|a| self.interest(a, r)).collect()
+    }
+
+    fn rate(&self, n: &Vec<A>, pv: &A) -> Vec<A> {
+        n.iter().map(|a| self.rate(a, pv)).collect()
     }
 }
 
-impl<A, B, C, D> InterestFraction<A, B, C> for D
+impl<A, B> TimeValueOfMoney<Vec<A>> for B
 where
-    D: FutureValue<A, B, C>,
+    A: std::ops::Neg<Output = A>,
+    B: TimeValueOfMoney<A>,
 {
-    fn simple_interest_fraction(n: &A, r: &B) -> C {
-        D::sub_pv(&D::simple_fv_fraction(n, r), &1.0)
+    fn fv(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
+        n.iter().zip(r.iter()).map(|(a, b)| self.fv(a, b)).collect()
     }
 
-    fn discrete_interest_fraction(n: &A, r: &B, m: &f64) -> C {
-        D::sub_pv(&D::discrete_fv_fraction(n, r, m), &1.0)
+    fn pv(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
+        n.iter().zip(r.iter()).map(|(a, b)| self.pv(a, b)).collect()
     }
 
-    fn continuous_interest_fraction(n: &A, r: &B) -> C {
-        D::sub_pv(&D::continuous_fv_fraction(n, r), &1.0)
+    fn interest(&self, n: &Vec<A>, r: &Vec<A>) -> Vec<A> {
+        n.iter()
+            .zip(r.iter())
+            .map(|(a, b)| self.interest(a, b))
+            .collect()
+    }
+
+    fn rate(&self, n: &Vec<A>, pv: &Vec<A>) -> Vec<A> {
+        n.iter()
+            .zip(pv.iter())
+            .map(|(a, b)| self.rate(a, b))
+            .collect()
+    }
+}
+
+//  --- Tests ---
+#[cfg(test)]
+mod test_interest_ops {
+
+    use super::*;
+    use crate::assert_approx_eq;
+
+    //  --- Rate ---
+
+    #[test]
+    fn test_scalar_rate_simple() {
+        let rate = 0.06;
+        let n = 1.33;
+        let convention = Simple;
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        assert_approx_eq!(rate, inferred_rate)
+    }
+
+    #[test]
+    fn test_vec_rate_simple() {
+        let rate = 0.06;
+        let n = vec![1.33, 1.54];
+        let convention = Simple;
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        for x in inferred_rate {
+            assert_approx_eq!(rate, x);
+        }
+    }
+
+    #[test]
+    fn test_scalar_rate_discrete() {
+        let rate = 0.06;
+        let n = 1.33;
+
+        let population = vec![
+            DiscreteCompoundingFrequencies::Weekly,
+            DiscreteCompoundingFrequencies::Monthly,
+            DiscreteCompoundingFrequencies::BiMonthly,
+            DiscreteCompoundingFrequencies::Quarterly,
+            DiscreteCompoundingFrequencies::TriAnnually,
+            DiscreteCompoundingFrequencies::SemiAnnually,
+            DiscreteCompoundingFrequencies::Annually,
+        ];
+
+        for convention in population {
+            let convention = Discrete(convention);
+            let present_value = convention.pv(&n, &rate);
+            let inferred_rate = convention.rate(&n, &present_value);
+            assert_approx_eq!(rate, inferred_rate)
+        }
+    }
+
+    #[test]
+    fn test_vec_rate_discrete() {
+        let rate = 0.06;
+        let n = vec![1.33, 1.54];
+
+        let population = vec![
+            DiscreteCompoundingFrequencies::Weekly,
+            DiscreteCompoundingFrequencies::Monthly,
+            DiscreteCompoundingFrequencies::BiMonthly,
+            DiscreteCompoundingFrequencies::Quarterly,
+            DiscreteCompoundingFrequencies::TriAnnually,
+            DiscreteCompoundingFrequencies::SemiAnnually,
+            DiscreteCompoundingFrequencies::Annually,
+        ];
+
+        for convention in population {
+            let convention = Discrete(convention);
+            let present_value = convention.pv(&n, &rate);
+            let inferred_rate = convention.rate(&n, &present_value);
+            for x in inferred_rate {
+                assert_approx_eq!(rate, x);
+            }
+        }
+    }
+
+    #[test]
+    fn test_scalar_rate_continuous() {
+        let rate = 0.06;
+        let n = 1.33;
+        let convention = Continuous;
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        assert_approx_eq!(rate, inferred_rate)
+    }
+
+    #[test]
+    fn test_vec_rate_continuous() {
+        let rate = 0.06;
+        let n = vec![1.33, 1.54];
+        let convention = Continuous;
+
+        let present_value = convention.pv(&n, &rate);
+        let inferred_rate = convention.rate(&n, &present_value);
+        for x in inferred_rate {
+            assert_approx_eq!(rate, x);
+        }
+    }
+
+    //  --- Present value ---
+
+    #[test]
+    fn test_scalar_pv_simple_to_discrete() {
+        let rate = 0.06;
+        let n = 1.57;
+        let base_convention = Simple;
+
+        let base_present_value = base_convention.pv(&n, &rate);
+
+        let population = vec![
+            DiscreteCompoundingFrequencies::Weekly,
+            DiscreteCompoundingFrequencies::Monthly,
+            DiscreteCompoundingFrequencies::BiMonthly,
+            DiscreteCompoundingFrequencies::Quarterly,
+            DiscreteCompoundingFrequencies::TriAnnually,
+            DiscreteCompoundingFrequencies::SemiAnnually,
+            DiscreteCompoundingFrequencies::Annually,
+        ];
+
+        for conv in population {
+            let into_convention = Discrete(conv);
+            let into_rate = into_convention.rate(&n, &base_present_value);
+            let into_present_value = into_convention.pv(&n, &into_rate);
+
+            assert_approx_eq!(base_present_value, into_present_value);
+        }
+    }
+
+    #[test]
+    fn test_scalar_pv_simple_to_continuous() {
+        let rate = 0.06;
+        let n = 1.57;
+        let base_convention = Simple;
+
+        let base_present_value = base_convention.pv(&n, &rate);
+
+        let into_convention = Continuous;
+        let into_rate = into_convention.rate(&n, &base_present_value);
+        let into_present_value = into_convention.pv(&n, &into_rate);
+
+        assert_approx_eq!(base_present_value, into_present_value);
+    }
+
+    #[test]
+    fn test_scalar_pv_discrete_to_simple() {
+        let rate = 0.06;
+        let n = 1.57;
+
+        let population = vec![
+            DiscreteCompoundingFrequencies::Weekly,
+            DiscreteCompoundingFrequencies::Monthly,
+            DiscreteCompoundingFrequencies::BiMonthly,
+            DiscreteCompoundingFrequencies::Quarterly,
+            DiscreteCompoundingFrequencies::TriAnnually,
+            DiscreteCompoundingFrequencies::SemiAnnually,
+            DiscreteCompoundingFrequencies::Annually,
+        ];
+
+        for base_convention in population {
+            let base_present_value = Discrete(base_convention).pv(&n, &rate);
+            let into_convention = Simple;
+            let into_rate = into_convention.rate(&n, &base_present_value);
+            let into_present_value = into_convention.pv(&n, &into_rate);
+
+            assert_approx_eq!(base_present_value, into_present_value);
+        }
+    }
+
+    #[test]
+    fn test_scalar_pv_discrete_to_continuous() {
+        let rate = 0.06;
+        let n = 1.57;
+
+        let population = vec![
+            DiscreteCompoundingFrequencies::Weekly,
+            DiscreteCompoundingFrequencies::Monthly,
+            DiscreteCompoundingFrequencies::BiMonthly,
+            DiscreteCompoundingFrequencies::Quarterly,
+            DiscreteCompoundingFrequencies::TriAnnually,
+            DiscreteCompoundingFrequencies::SemiAnnually,
+            DiscreteCompoundingFrequencies::Annually,
+        ];
+
+        for base_convention in population {
+            let base_present_value = Discrete(base_convention).pv(&n, &rate);
+            let into_convention = Continuous;
+            let into_rate = into_convention.rate(&n, &base_present_value);
+            let into_present_value = into_convention.pv(&n, &into_rate);
+
+            assert_approx_eq!(base_present_value, into_present_value);
+        }
     }
 }
