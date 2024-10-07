@@ -6,10 +6,9 @@
 //! Discount factor:
 //! Forward rate:
 //! Par rate:
-// FIXME continue with documentation!
 
 //! Formulae
-//! DISCOUNT VS SWAP : (S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^nm.Dfn = 1 (where S = Swap rate, and Df = Discount factors)
+//! DISCOUNT VS SWAP : (S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^(nx.m).Dfx = 1 (where S = Swap rate, and Df = Discount factors)
 //! DISCOUNT VS SPOT: (1 + S/m)^nm.Df = 1 (where S = Spot rate, and Df = Discount factor)
 //! DISCOUNT VS FORWARD: ...
 //! SWAP VS SPOT: DISCOUNT VS SWAP but Df is replaced with (1+r/m)^nm
@@ -27,8 +26,6 @@
 
 // Only 1 discount factor, irrespective of the rate type !!!!!!!!!
 // Forward rate relies on no-arbitrage idea !!!
-
-// This module assumes that an Equivalent Annual Rate (EAR) is passed.
 
 // 2y1y forward rate, can be interpreted as the forward rate that starts in 2 years,
 // and is effective for a period of 1 year afterwards.
@@ -56,9 +53,13 @@
 // ^ Therefore, when calculating the discount factor using swap rates, you should consider previous discount factors,
 // while calculating the discount factor using the spot rates, you only use a single rate.
 
+// The purpose of module is not to convert individual rates, but rather a curve.
 use super::ops::{InterestConventions, TimeValueOfMoney};
 
-// TODO implement solver, similar to Excel to assit with conversion.
+type Point = (f64, f64);
+type Points<'a> = (&'a [f64], &'a [f64]);
+
+// TODO create unit tests.
 
 pub enum RateTypes {
     Swap(InterestConventions),
@@ -74,81 +75,198 @@ struct Spot(InterestConventions);
 struct Forward(InterestConventions);
 struct Par(InterestConventions);
 
+//  --- Swap rate conversions ---
 // fn swap_to_discount
 // fn swap_to_spot
 // fn swap_to_forward
 // fn swap_to_par
 
+//  --- Discount rate conversions ---
 // fn discount_to_swap
-// fn discount_to_spot
+// fn discount_to_spot(
 // fn discount_to_forward
 // fn discount_to_par
 
+//  --- Spot rate conversions ---
 // fn spot_to_swap
 // fn spot_to_discount
 // fn spot_to_forward
 // fn spot_to_par
 
+//  --- Forward rate conversions ---
 // fn forward_to_swap
 // fn forward_to_discount
 // fn forward_to_spot
 // fn forward_to_par
 
+//  --- Par rate conversions ---
 // fn par_to_swap
 // fn par_to_discount
 // fn par_to_spot
 // fn par_to_forward
 
-fn discount_to_spot(convention: &InterestConventions, n: &f64, discount_rate: &f64) -> f64 {
-    convention.rate(n, discount_rate)
+// This works.
+pub fn swap_to_discount(
+    convention: &InterestConventions,
+    swap_point: &Point,
+    df_points: &Points,
+) -> f64 {
+    (1.0 - df_points
+        .0
+        .iter()
+        .zip(df_points.1.iter())
+        .map(|(a, b)| convention.interest(a, &swap_point.1) * b)
+        .sum::<f64>())
+        / (convention.fv(&swap_point.0, &swap_point.1))
 }
 
-fn spot_to_discount(convention: &InterestConventions, n: &f64, spot_rate: &f64) -> f64 {
-    convention.pv(n, spot_rate)
+// Where Point = (n, r).
+fn spot_to_discount(convention: &InterestConventions, point: &Point) -> f64 {
+    convention.pv(&point.0, &point.1)
 }
 
-// Where &(x, y) = (n, r).
+// Where Point = (n, df).
+fn discount_to_spot(convention: &InterestConventions, point: &Point) -> f64 {
+    convention.rate(&point.0, &point.1)
+}
+
+// Where Point = (n, r).
 pub fn spot_to_forward(
     convention: &InterestConventions,
-    short: &(f64, f64),
-    long: &(f64, f64),
+    short_point: &Point,
+    long_point: &Point,
 ) -> f64 {
-    let (short_n, short_r) = short;
-    let (long_n, long_r) = long;
+    let (short_n, short_r) = short_point;
+    let (long_n, long_r) = long_point;
     let short_pv = convention.pv(short_n, short_r);
     let long_pv = convention.pv(long_n, long_r);
     convention.rate(&(long_n - short_n), &(long_pv / short_pv))
 }
 
-// Solve for the rate at each point, and then pass to spot_to_forward fn?
-// Where &(x, y) = (n, df).
+// Where Point = (n, df).
 pub fn discount_to_forward(
     convention: &InterestConventions,
-    short: &(f64, f64),
-    long: &(f64, f64),
+    short_point: &Point,
+    long_point: &Point,
 ) -> f64 {
-    let (short_n, short_df) = short;
-    let (long_n, long_df) = long;
+    let (short_n, short_df) = short_point;
+    let (long_n, long_df) = long_point;
     convention.rate(&(long_n - short_n), &(long_df / short_df))
 }
 
+//  --- Checks ---
+// (To be used with solver)
+
+// To be used with the solver module to find the 'swap_rate' that would produce 1.0.
 //(S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^nm.Dfn = 1
 // Returns the result of the above.
-pub fn discount_to_swap_check(swap_rate: &f64, n: &[f64], m: &f64, df: &[f64]) -> f64 {
-    assert_eq!(n.len(), df.len());
+// Should be 1.0;
+// Double check this logic.
+pub fn discount_and_swap_check(
+    convention: &InterestConventions,
+    swap_rate: &f64,
+    points: &Points,
+) -> f64 {
+    let n = points.0;
+    let df = points.1;
 
     let mut iter = n.iter().zip(df.iter()).peekable();
 
     let value: f64 = std::iter::from_fn(|| {
         iter.next().map(|(a, b)| {
             if iter.peek().is_none() {
-                ((1.0 + swap_rate / m).powf(a * m)) * b
+                convention.fv(a, swap_rate) * b
             } else {
-                ((swap_rate / m).powf(a * m)) * b
+                convention.interest(a, swap_rate) * b
             }
         })
     })
     .sum();
 
     value
+}
+
+// Should be zero.
+fn forward_check(
+    convention: &InterestConventions,
+    short_point: &Point,
+    forward_point: &Point,
+    long_point: &Point,
+) -> f64 {
+    let mut short = convention.fv(&short_point.0, &short_point.1);
+    short *= convention.fv(&forward_point.0, &forward_point.1);
+    let long = convention.fv(&long_point.0, &long_point.1);
+
+    long - short
+}
+
+//  --- Tests ---
+#[cfg(test)]
+mod test_interest_types {
+
+    use super::*;
+    use crate::assert_approx_eq;
+    use crate::interest::ops::DiscreteCompoundingFrequencies;
+
+    mod test_swap_to_discount {
+
+        use super::*;
+
+        #[test]
+        fn test_swap_to_discount_simple() {
+            let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
+            let n = vec![0.5, 0.5, 0.5, 0.5]; //, 0.5];
+            let convention = InterestConventions::Simple;
+            let swap_rate = 0.07;
+            let swap_point = (0.5, swap_rate);
+            let df_points = (n.as_slice(), df.as_slice());
+
+            let last_df = swap_to_discount(&convention, &swap_point, &df_points);
+
+            let n = vec![0.5, 0.5, 0.5, 0.5, 0.5];
+            let mut df = vec![0.996489, 0.991306, 0.984494, 0.975616];
+            df.push(last_df);
+
+            let value_check = discount_and_swap_check(&convention, &swap_rate, &(&n, &df));
+            assert_approx_eq!(value_check, 1.0);
+        }
+
+        #[test]
+        fn test_swap_to_discount_continuous() {
+            let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
+            let n = vec![0.5, 0.5, 0.5, 0.5]; //, 0.5];
+            let convention = InterestConventions::Continuous;
+            let swap_rate = 0.07;
+            let swap_point = (0.5, swap_rate);
+            let df_points = (n.as_slice(), df.as_slice());
+
+            let last_df = swap_to_discount(&convention, &swap_point, &df_points);
+
+            let n = vec![0.5, 0.5, 0.5, 0.5, 0.5];
+            let mut df = vec![0.996489, 0.991306, 0.984494, 0.975616];
+            df.push(last_df);
+
+            let value_check = discount_and_swap_check(&convention, &swap_rate, &(&n, &df));
+            assert_approx_eq!(value_check, 1.0);
+        }
+
+        #[test]
+        fn test_swap_to_discount_discrete() {
+            let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
+            let n = vec![0.5, 0.5, 0.5, 0.5]; //, 0.5];
+            let convention = InterestConventions::Discrete(DiscreteCompoundingFrequencies::Monthly);
+            let swap_rate = 0.07;
+            let swap_point = (0.5, swap_rate);
+            let df_points = (n.as_slice(), df.as_slice());
+
+            let last_df = swap_to_discount(&convention, &swap_point, &df_points);
+
+            let n = vec![0.5, 0.5, 0.5, 0.5, 0.5];
+            let mut df = vec![0.996489, 0.991306, 0.984494, 0.975616];
+            df.push(last_df);
+
+            let value_check = discount_and_swap_check(&convention, &swap_rate, &(&n, &df));
+            assert_approx_eq!(value_check, 1.0);
+        }
+    }
 }

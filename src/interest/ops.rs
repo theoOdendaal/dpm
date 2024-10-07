@@ -1,10 +1,8 @@
 //  --- Compounding frequencies ---
 
 // TODO improve error handling.
-// TODO rename this module to ops, once logic has been transferred.
 // TODO add more unit tests.
 // TODO add unit tests for vec's. Specifically for the pv tests.
-// TODO transfer interest::types.rs content to this module. interest module should contain only 'ops' and 'term_structure'.
 
 // FIXME, double check logic.
 
@@ -242,72 +240,99 @@ mod test_interest_ops {
     use super::*;
     use crate::assert_approx_eq;
 
-    //  --- Rate ---
+    mod test_rate {
 
-    #[test]
-    fn test_scalar_rate_simple() {
-        let rate = 0.06;
-        let n = 1.33;
-        let convention = Simple;
+        use super::*;
 
-        let present_value = convention.pv(&n, &rate);
-        let inferred_rate = convention.rate(&n, &present_value);
-        assert_approx_eq!(rate, inferred_rate)
-    }
+        #[test]
+        fn test_scalar_rate_simple() {
+            let rate = 0.06;
+            let n = 1.33;
+            let convention = Simple;
 
-    #[test]
-    fn test_vec_rate_simple() {
-        let rate = 0.06;
-        let n = vec![1.33, 1.54];
-        let convention = Simple;
-
-        let present_value = convention.pv(&n, &rate);
-        let inferred_rate = convention.rate(&n, &present_value);
-        for x in inferred_rate {
-            assert_approx_eq!(rate, x);
-        }
-    }
-
-    #[test]
-    fn test_scalar_rate_discrete() {
-        let rate = 0.06;
-        let n = 1.33;
-
-        let population = vec![
-            DiscreteCompoundingFrequencies::Weekly,
-            DiscreteCompoundingFrequencies::Monthly,
-            DiscreteCompoundingFrequencies::BiMonthly,
-            DiscreteCompoundingFrequencies::Quarterly,
-            DiscreteCompoundingFrequencies::TriAnnually,
-            DiscreteCompoundingFrequencies::SemiAnnually,
-            DiscreteCompoundingFrequencies::Annually,
-        ];
-
-        for convention in population {
-            let convention = Discrete(convention);
             let present_value = convention.pv(&n, &rate);
             let inferred_rate = convention.rate(&n, &present_value);
             assert_approx_eq!(rate, inferred_rate)
         }
-    }
 
-    #[test]
-    fn test_vec_rate_discrete() {
-        let rate = 0.06;
-        let n = vec![1.33, 1.54];
+        #[test]
+        fn test_vec_rate_simple() {
+            let rate = 0.06;
+            let n = vec![1.33, 1.54];
+            let convention = Simple;
 
-        let population = vec![
-            DiscreteCompoundingFrequencies::Weekly,
-            DiscreteCompoundingFrequencies::Monthly,
-            DiscreteCompoundingFrequencies::BiMonthly,
-            DiscreteCompoundingFrequencies::Quarterly,
-            DiscreteCompoundingFrequencies::TriAnnually,
-            DiscreteCompoundingFrequencies::SemiAnnually,
-            DiscreteCompoundingFrequencies::Annually,
-        ];
+            let present_value = convention.pv(&n, &rate);
+            let inferred_rate = convention.rate(&n, &present_value);
+            for x in inferred_rate {
+                assert_approx_eq!(rate, x);
+            }
+        }
 
-        for convention in population {
-            let convention = Discrete(convention);
+        #[test]
+        fn test_scalar_rate_discrete() {
+            let rate = 0.06;
+            let n = 1.33;
+
+            let population = vec![
+                DiscreteCompoundingFrequencies::Weekly,
+                DiscreteCompoundingFrequencies::Monthly,
+                DiscreteCompoundingFrequencies::BiMonthly,
+                DiscreteCompoundingFrequencies::Quarterly,
+                DiscreteCompoundingFrequencies::TriAnnually,
+                DiscreteCompoundingFrequencies::SemiAnnually,
+                DiscreteCompoundingFrequencies::Annually,
+            ];
+
+            for convention in population {
+                let convention = Discrete(convention);
+                let present_value = convention.pv(&n, &rate);
+                let inferred_rate = convention.rate(&n, &present_value);
+                assert_approx_eq!(rate, inferred_rate)
+            }
+        }
+
+        #[test]
+        fn test_vec_rate_discrete() {
+            let rate = 0.06;
+            let n = vec![1.33, 1.54];
+
+            let population = vec![
+                DiscreteCompoundingFrequencies::Weekly,
+                DiscreteCompoundingFrequencies::Monthly,
+                DiscreteCompoundingFrequencies::BiMonthly,
+                DiscreteCompoundingFrequencies::Quarterly,
+                DiscreteCompoundingFrequencies::TriAnnually,
+                DiscreteCompoundingFrequencies::SemiAnnually,
+                DiscreteCompoundingFrequencies::Annually,
+            ];
+
+            for convention in population {
+                let convention = Discrete(convention);
+                let present_value = convention.pv(&n, &rate);
+                let inferred_rate = convention.rate(&n, &present_value);
+                for x in inferred_rate {
+                    assert_approx_eq!(rate, x);
+                }
+            }
+        }
+
+        #[test]
+        fn test_scalar_rate_continuous() {
+            let rate = 0.06;
+            let n = 1.33;
+            let convention = Continuous;
+
+            let present_value = convention.pv(&n, &rate);
+            let inferred_rate = convention.rate(&n, &present_value);
+            assert_approx_eq!(rate, inferred_rate)
+        }
+
+        #[test]
+        fn test_vec_rate_continuous() {
+            let rate = 0.06;
+            let n = vec![1.33, 1.54];
+            let convention = Continuous;
+
             let present_value = convention.pv(&n, &rate);
             let inferred_rate = convention.rate(&n, &present_value);
             for x in inferred_rate {
@@ -316,121 +341,100 @@ mod test_interest_ops {
         }
     }
 
-    #[test]
-    fn test_scalar_rate_continuous() {
-        let rate = 0.06;
-        let n = 1.33;
-        let convention = Continuous;
+    mod test_present_value {
 
-        let present_value = convention.pv(&n, &rate);
-        let inferred_rate = convention.rate(&n, &present_value);
-        assert_approx_eq!(rate, inferred_rate)
-    }
+        use super::*;
 
-    #[test]
-    fn test_vec_rate_continuous() {
-        let rate = 0.06;
-        let n = vec![1.33, 1.54];
-        let convention = Continuous;
+        #[test]
+        fn test_scalar_pv_simple_to_discrete() {
+            let rate = 0.06;
+            let n = 1.57;
+            let base_convention = Simple;
 
-        let present_value = convention.pv(&n, &rate);
-        let inferred_rate = convention.rate(&n, &present_value);
-        for x in inferred_rate {
-            assert_approx_eq!(rate, x);
+            let base_present_value = base_convention.pv(&n, &rate);
+
+            let population = vec![
+                DiscreteCompoundingFrequencies::Weekly,
+                DiscreteCompoundingFrequencies::Monthly,
+                DiscreteCompoundingFrequencies::BiMonthly,
+                DiscreteCompoundingFrequencies::Quarterly,
+                DiscreteCompoundingFrequencies::TriAnnually,
+                DiscreteCompoundingFrequencies::SemiAnnually,
+                DiscreteCompoundingFrequencies::Annually,
+            ];
+
+            for conv in population {
+                let into_convention = Discrete(conv);
+                let into_rate = into_convention.rate(&n, &base_present_value);
+                let into_present_value = into_convention.pv(&n, &into_rate);
+
+                assert_approx_eq!(base_present_value, into_present_value);
+            }
         }
-    }
 
-    //  --- Present value ---
+        #[test]
+        fn test_scalar_pv_simple_to_continuous() {
+            let rate = 0.06;
+            let n = 1.57;
+            let base_convention = Simple;
 
-    #[test]
-    fn test_scalar_pv_simple_to_discrete() {
-        let rate = 0.06;
-        let n = 1.57;
-        let base_convention = Simple;
+            let base_present_value = base_convention.pv(&n, &rate);
 
-        let base_present_value = base_convention.pv(&n, &rate);
-
-        let population = vec![
-            DiscreteCompoundingFrequencies::Weekly,
-            DiscreteCompoundingFrequencies::Monthly,
-            DiscreteCompoundingFrequencies::BiMonthly,
-            DiscreteCompoundingFrequencies::Quarterly,
-            DiscreteCompoundingFrequencies::TriAnnually,
-            DiscreteCompoundingFrequencies::SemiAnnually,
-            DiscreteCompoundingFrequencies::Annually,
-        ];
-
-        for conv in population {
-            let into_convention = Discrete(conv);
-            let into_rate = into_convention.rate(&n, &base_present_value);
-            let into_present_value = into_convention.pv(&n, &into_rate);
-
-            assert_approx_eq!(base_present_value, into_present_value);
-        }
-    }
-
-    #[test]
-    fn test_scalar_pv_simple_to_continuous() {
-        let rate = 0.06;
-        let n = 1.57;
-        let base_convention = Simple;
-
-        let base_present_value = base_convention.pv(&n, &rate);
-
-        let into_convention = Continuous;
-        let into_rate = into_convention.rate(&n, &base_present_value);
-        let into_present_value = into_convention.pv(&n, &into_rate);
-
-        assert_approx_eq!(base_present_value, into_present_value);
-    }
-
-    #[test]
-    fn test_scalar_pv_discrete_to_simple() {
-        let rate = 0.06;
-        let n = 1.57;
-
-        let population = vec![
-            DiscreteCompoundingFrequencies::Weekly,
-            DiscreteCompoundingFrequencies::Monthly,
-            DiscreteCompoundingFrequencies::BiMonthly,
-            DiscreteCompoundingFrequencies::Quarterly,
-            DiscreteCompoundingFrequencies::TriAnnually,
-            DiscreteCompoundingFrequencies::SemiAnnually,
-            DiscreteCompoundingFrequencies::Annually,
-        ];
-
-        for base_convention in population {
-            let base_present_value = Discrete(base_convention).pv(&n, &rate);
-            let into_convention = Simple;
-            let into_rate = into_convention.rate(&n, &base_present_value);
-            let into_present_value = into_convention.pv(&n, &into_rate);
-
-            assert_approx_eq!(base_present_value, into_present_value);
-        }
-    }
-
-    #[test]
-    fn test_scalar_pv_discrete_to_continuous() {
-        let rate = 0.06;
-        let n = 1.57;
-
-        let population = vec![
-            DiscreteCompoundingFrequencies::Weekly,
-            DiscreteCompoundingFrequencies::Monthly,
-            DiscreteCompoundingFrequencies::BiMonthly,
-            DiscreteCompoundingFrequencies::Quarterly,
-            DiscreteCompoundingFrequencies::TriAnnually,
-            DiscreteCompoundingFrequencies::SemiAnnually,
-            DiscreteCompoundingFrequencies::Annually,
-        ];
-
-        for base_convention in population {
-            let base_present_value = Discrete(base_convention).pv(&n, &rate);
             let into_convention = Continuous;
             let into_rate = into_convention.rate(&n, &base_present_value);
             let into_present_value = into_convention.pv(&n, &into_rate);
 
             assert_approx_eq!(base_present_value, into_present_value);
+        }
+
+        #[test]
+        fn test_scalar_pv_discrete_to_simple() {
+            let rate = 0.06;
+            let n = 1.57;
+
+            let population = vec![
+                DiscreteCompoundingFrequencies::Weekly,
+                DiscreteCompoundingFrequencies::Monthly,
+                DiscreteCompoundingFrequencies::BiMonthly,
+                DiscreteCompoundingFrequencies::Quarterly,
+                DiscreteCompoundingFrequencies::TriAnnually,
+                DiscreteCompoundingFrequencies::SemiAnnually,
+                DiscreteCompoundingFrequencies::Annually,
+            ];
+
+            for base_convention in population {
+                let base_present_value = Discrete(base_convention).pv(&n, &rate);
+                let into_convention = Simple;
+                let into_rate = into_convention.rate(&n, &base_present_value);
+                let into_present_value = into_convention.pv(&n, &into_rate);
+
+                assert_approx_eq!(base_present_value, into_present_value);
+            }
+        }
+
+        #[test]
+        fn test_scalar_pv_discrete_to_continuous() {
+            let rate = 0.06;
+            let n = 1.57;
+
+            let population = vec![
+                DiscreteCompoundingFrequencies::Weekly,
+                DiscreteCompoundingFrequencies::Monthly,
+                DiscreteCompoundingFrequencies::BiMonthly,
+                DiscreteCompoundingFrequencies::Quarterly,
+                DiscreteCompoundingFrequencies::TriAnnually,
+                DiscreteCompoundingFrequencies::SemiAnnually,
+                DiscreteCompoundingFrequencies::Annually,
+            ];
+
+            for base_convention in population {
+                let base_present_value = Discrete(base_convention).pv(&n, &rate);
+                let into_convention = Continuous;
+                let into_rate = into_convention.rate(&n, &base_present_value);
+                let into_present_value = into_convention.pv(&n, &into_rate);
+
+                assert_approx_eq!(base_present_value, into_present_value);
+            }
         }
     }
 }

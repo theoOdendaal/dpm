@@ -16,30 +16,52 @@ use dpm::interest::ops::InterestConventions;
 // TODO, all new functions should be 'const'.
 //use dpm::core::solver::{self, SolveEquation};
 //use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
-use dpm::interest::types::{discount_to_forward, discount_to_swap_check, spot_to_forward};
-
-use dpm::core::solver::NewtonRaphson;
+use dpm::interest::types::{discount_and_swap_check, swap_to_discount};
 
 fn main() {
+    let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
+    let n = vec![0.5, 0.5, 0.5, 0.5]; //, 0.5];
+    let convention = InterestConventions::Discrete(
+        dpm::interest::ops::DiscreteCompoundingFrequencies::SemiAnnually,
+    );
+    let swap_rate = 0.07;
+    let swap_point = (0.5, swap_rate);
+    let df_points = (n.as_slice(), df.as_slice());
+
+    let res = swap_to_discount(&convention, &swap_point, &df_points);
+
+    let all_ns = vec![0.5, 0.5, 0.5, 0.5, 0.5];
+    let mut all_dfs = vec![0.996489, 0.991306, 0.984494, 0.975616];
+    all_dfs.push(res);
+
+    let testing = discount_and_swap_check(&convention, &swap_rate, &(&all_ns, &all_dfs));
+
+    println!("{:?}", testing);
+    println!("{:?}", &res);
+
     // Forward rate solver.
+    /*
     let first = (90.0 / 365.0, 0.982262730598449);
     let second = (181.0 / 365.0, 0.962226033210754);
     let convention = InterestConventions::Simple;
     let f = discount_to_forward(&convention, &first, &second);
-
     println!("{:?}", f);
+    */
 
     // Swap rate solver.
     /*
     let df = [0.996489, 0.991306, 0.984494, 0.975616, 0.964519];
     let n = [0.5, 0.5, 0.5, 0.5, 0.5];
-    let df = &df[..5];
+    let df = &df[..2];
     let n = &n[..df.len()];
-    let m = 11.0;
-    let close = |a: f64| discount_to_swap_check(&a, n, &m, df);
+    let points = (n, df);
+    let convention = InterestConventions::Discrete(
+        dpm::interest::ops::DiscreteCompoundingFrequencies::SemiAnnually,
+    );
+    let close = |a: f64| discount_and_swap_check(&convention, &a, &points);
     let res_1 = f64::solve(&0.0, close);
     dbg!(res_1);
-    dbg!(discount_to_swap_check(&res_1, n, &m, df));
+    dbg!(discount_and_swap_check(&convention, &res_1, &points));
     */
 
     // Solver.
