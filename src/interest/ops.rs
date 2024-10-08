@@ -240,7 +240,7 @@ where
 // TODO add detailed documentation.
 // TODO add unit tests for the below.
 // TODO the logic below does not hold true in all instances, i.e. simple fv should not be calculated by multiuplying the various fv's. Perhaps implement his for each rate type?
-
+// FIXME, is the below implementations necessary? As now it requires explicit type hints?
 // The below impl should be used in instances where
 // the reset frequency is more frequent than the payment frequency.
 // Rather than treating each element separately, chain the values.
@@ -307,8 +307,8 @@ mod test_interest_ops {
             let n = 1.33;
             let convention = Simple;
 
-            let present_value = convention.pv(&n, &rate);
-            let inferred_rate = convention.rate(&n, &present_value);
+            let present_value: f64 = convention.pv(&n, &rate);
+            let inferred_rate: f64 = convention.rate(&n, &present_value);
             assert_approx_eq!(rate, inferred_rate)
         }
 
@@ -318,8 +318,8 @@ mod test_interest_ops {
             let n = vec![1.33, 1.54];
             let convention = Simple;
 
-            let present_value = convention.pv(&n, &rate);
-            let inferred_rate = convention.rate(&n, &present_value);
+            let present_value: Vec<f64> = convention.pv(&n, &rate);
+            let inferred_rate: Vec<f64> = convention.rate(&n, &present_value);
             for x in inferred_rate {
                 assert_approx_eq!(rate, x);
             }
@@ -342,8 +342,8 @@ mod test_interest_ops {
 
             for convention in population {
                 let convention = Discrete(convention);
-                let present_value = convention.pv(&n, &rate);
-                let inferred_rate = convention.rate(&n, &present_value);
+                let present_value: f64 = convention.pv(&n, &rate);
+                let inferred_rate: f64 = convention.rate(&n, &present_value);
                 assert_approx_eq!(rate, inferred_rate)
             }
         }
@@ -365,8 +365,8 @@ mod test_interest_ops {
 
             for convention in population {
                 let convention = Discrete(convention);
-                let present_value = convention.pv(&n, &rate);
-                let inferred_rate = convention.rate(&n, &present_value);
+                let present_value: Vec<f64> = convention.pv(&n, &rate);
+                let inferred_rate: Vec<f64> = convention.rate(&n, &present_value);
                 for x in inferred_rate {
                     assert_approx_eq!(rate, x);
                 }
@@ -379,8 +379,8 @@ mod test_interest_ops {
             let n = 1.33;
             let convention = Continuous;
 
-            let present_value = convention.pv(&n, &rate);
-            let inferred_rate = convention.rate(&n, &present_value);
+            let present_value: f64 = convention.pv(&n, &rate);
+            let inferred_rate: f64 = convention.rate(&n, &present_value);
             assert_approx_eq!(rate, inferred_rate)
         }
 
@@ -390,8 +390,8 @@ mod test_interest_ops {
             let n = vec![1.33, 1.54];
             let convention = Continuous;
 
-            let present_value = convention.pv(&n, &rate);
-            let inferred_rate = convention.rate(&n, &present_value);
+            let present_value: Vec<f64> = convention.pv(&n, &rate);
+            let inferred_rate: Vec<f64> = convention.rate(&n, &present_value);
             for x in inferred_rate {
                 assert_approx_eq!(rate, x);
             }
@@ -408,7 +408,7 @@ mod test_interest_ops {
             let n = 1.57;
             let base_convention = Simple;
 
-            let base_present_value = base_convention.pv(&n, &rate);
+            let base_present_value: f64 = base_convention.pv(&n, &rate);
 
             let population = vec![
                 DiscreteCompoundingFrequencies::Weekly,
@@ -422,8 +422,8 @@ mod test_interest_ops {
 
             for conv in population {
                 let into_convention = Discrete(conv);
-                let into_rate = into_convention.rate(&n, &base_present_value);
-                let into_present_value = into_convention.pv(&n, &into_rate);
+                let into_rate: f64 = into_convention.rate(&n, &base_present_value);
+                let into_present_value: f64 = into_convention.pv(&n, &into_rate);
 
                 assert_approx_eq!(base_present_value, into_present_value);
             }
@@ -435,11 +435,11 @@ mod test_interest_ops {
             let n = 1.57;
             let base_convention = Simple;
 
-            let base_present_value = base_convention.pv(&n, &rate);
+            let base_present_value: f64 = base_convention.pv(&n, &rate);
 
             let into_convention = Continuous;
-            let into_rate = into_convention.rate(&n, &base_present_value);
-            let into_present_value = into_convention.pv(&n, &into_rate);
+            let into_rate: f64 = into_convention.rate(&n, &base_present_value);
+            let into_present_value: f64 = into_convention.pv(&n, &into_rate);
 
             assert_approx_eq!(base_present_value, into_present_value);
         }
@@ -460,10 +460,10 @@ mod test_interest_ops {
             ];
 
             for base_convention in population {
-                let base_present_value = Discrete(base_convention).pv(&n, &rate);
+                let base_present_value: f64 = Discrete(base_convention).pv(&n, &rate);
                 let into_convention = Simple;
-                let into_rate = into_convention.rate(&n, &base_present_value);
-                let into_present_value = into_convention.pv(&n, &into_rate);
+                let into_rate: f64 = into_convention.rate(&n, &base_present_value);
+                let into_present_value: f64 = into_convention.pv(&n, &into_rate);
 
                 assert_approx_eq!(base_present_value, into_present_value);
             }
@@ -485,10 +485,10 @@ mod test_interest_ops {
             ];
 
             for base_convention in population {
-                let base_present_value = Discrete(base_convention).pv(&n, &rate);
+                let base_present_value: f64 = Discrete(base_convention).pv(&n, &rate);
                 let into_convention = Continuous;
-                let into_rate = into_convention.rate(&n, &base_present_value);
-                let into_present_value = into_convention.pv(&n, &into_rate);
+                let into_rate: f64 = into_convention.rate(&n, &base_present_value);
+                let into_present_value: f64 = into_convention.pv(&n, &into_rate);
 
                 assert_approx_eq!(base_present_value, into_present_value);
             }
