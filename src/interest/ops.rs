@@ -235,61 +235,6 @@ where
     }
 }
 
-// TODO complete.
-// TODO check and test logic.
-// TODO add detailed documentation.
-// TODO add unit tests for the below.
-// TODO the logic below does not hold true in all instances, i.e. simple fv should not be calculated by multiuplying the various fv's. Perhaps implement his for each rate type?
-// FIXME, is the below implementations necessary? As now it requires explicit type hints?
-// The below impl should be used in instances where
-// the reset frequency is more frequent than the payment frequency.
-// Rather than treating each element separately, chain the values.
-// e.x. calculate the FV treating each element pair as reinvestment terms.
-// Essentially calculated effective factors taking into account
-// multipl periods.
-
-// interest fn assumes that returns are not reinvested, whereas the fv fn does assume returns are reinvested.
-impl<A, B> TimeValueOfMoney<Vec<A>, Vec<A>, A> for B
-where
-    A: std::iter::Product<A> + std::iter::Sum<A> + Copy,
-    B: TimeValueOfMoney<A> + TimeValueOfMoney<Vec<A>, Vec<A>, Vec<A>>,
-{
-    // Aggregate future value factor, taking into account multiple
-    // periods.
-    fn fv(&self, n: &Vec<A>, r: &Vec<A>) -> A {
-        let value: Vec<A> = self.fv(n, r);
-        value.into_iter().product()
-    }
-
-    // Effective present value factor, taking into
-    // account multipl periods.
-    fn pv(&self, n: &Vec<A>, r: &Vec<A>) -> A {
-        let value: Vec<A> = self.pv(n, r);
-        value.into_iter().product()
-    }
-
-    // Aggregate interest factor, taking into account
-    // multiple periods.
-    fn interest(&self, n: &Vec<A>, r: &Vec<A>) -> A {
-        let value: Vec<A> = self.interest(n, r);
-        value.into_iter().sum()
-    }
-
-    // 1 = (1+r/m)^(-n1*m) AND PV1
-    // 2 = (1+r/m)^(-n2*m) AND PV2
-    // Solves for the effective rate that would
-    // produce the desired present value product.
-    // (1+r/m)^(-n1*m) * (1+r/m)^(-n2*m) = PV1 * PV2
-    // Not exactly certain when this would be useful.
-    // FIXME, this logic is faulty.
-    fn rate(&self, n: &Vec<A>, pv: &Vec<A>) -> A {
-        let agg_pv: A = pv.iter().copied().product();
-        let agg_n: A = n.iter().copied().sum();
-        let rate: A = self.rate(&agg_n, &agg_pv);
-        rate
-    }
-}
-
 //  --- Tests ---
 #[cfg(test)]
 mod test_interest_ops {

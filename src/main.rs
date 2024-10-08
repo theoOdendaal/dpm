@@ -20,11 +20,13 @@ use dpm::{
 };
 
 fn main() {
+    /*
     let n = vec![0.5, 0.7];
     let pv = vec![0.97, 0.96];
     let conventions = InterestConventions::Simple;
     let res: f64 = conventions.rate(&n, &pv);
     println!("{:?}", res);
+    */
 
     /*
     let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
