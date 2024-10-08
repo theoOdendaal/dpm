@@ -81,30 +81,6 @@ struct Par(InterestConventions);
 // fn swap_to_forward
 // fn swap_to_par
 
-//  --- Discount rate conversions ---
-// fn discount_to_swap
-// fn discount_to_spot(
-// fn discount_to_forward
-// fn discount_to_par
-
-//  --- Spot rate conversions ---
-// fn spot_to_swap
-// fn spot_to_discount
-// fn spot_to_forward
-// fn spot_to_par
-
-//  --- Forward rate conversions ---
-// fn forward_to_swap
-// fn forward_to_discount
-// fn forward_to_spot
-// fn forward_to_par
-
-//  --- Par rate conversions ---
-// fn par_to_swap
-// fn par_to_discount
-// fn par_to_spot
-// fn par_to_forward
-
 // This works.
 pub fn swap_to_discount(
     convention: &InterestConventions,
@@ -120,16 +96,53 @@ pub fn swap_to_discount(
         / (convention.fv(&swap_point.0, &swap_point.1))
 }
 
-// Where Point = (n, r).
-fn spot_to_discount(convention: &InterestConventions, point: &Point) -> f64 {
-    convention.pv(&point.0, &point.1)
+// Double check this logic.
+pub fn swap_to_spot(
+    convention: &InterestConventions,
+    swap_point: &Point,
+    spot_points: &Points,
+) -> f64 {
+    (1.0 - spot_points
+        .0
+        .iter()
+        .zip(spot_points.1.iter())
+        .map(|(a, b)| convention.interest(a, &swap_point.1) * convention.pv(a, b))
+        .sum::<f64>())
+        / (convention.fv(&swap_point.0, &swap_point.1))
 }
+
+//  --- Discount rate conversions ---
+// fn discount_to_swap
+// fn discount_to_spot
+// fn discount_to_forward
+// fn discount_to_par
 
 // Where Point = (n, df).
 fn discount_to_spot(convention: &InterestConventions, point: &Point) -> f64 {
     convention.rate(&point.0, &point.1)
 }
 
+// Where Point = (n, df).
+pub fn discount_to_forward(
+    convention: &InterestConventions,
+    short_point: &Point,
+    long_point: &Point,
+) -> f64 {
+    let (short_n, short_df) = short_point;
+    let (long_n, long_df) = long_point;
+    convention.rate(&(long_n - short_n), &(long_df / short_df))
+}
+
+//  --- Spot rate conversions ---
+// fn spot_to_swap
+// fn spot_to_discount
+// fn spot_to_forward
+// fn spot_to_par
+
+// Where Point = (n, r).
+fn spot_to_discount(convention: &InterestConventions, point: &Point) -> f64 {
+    convention.pv(&point.0, &point.1)
+}
 // Where Point = (n, r).
 pub fn spot_to_forward(
     convention: &InterestConventions,
@@ -143,16 +156,41 @@ pub fn spot_to_forward(
     convention.rate(&(long_n - short_n), &(long_pv / short_pv))
 }
 
-// Where Point = (n, df).
-pub fn discount_to_forward(
+//  --- Forward rate conversions ---
+// fn forward_to_swap
+// fn forward_to_discount
+// fn forward_to_spot
+// fn forward_to_par
+
+fn forward_to_short_spot(
     convention: &InterestConventions,
-    short_point: &Point,
+    forward_point: &Point,
     long_point: &Point,
 ) -> f64 {
-    let (short_n, short_df) = short_point;
-    let (long_n, long_df) = long_point;
-    convention.rate(&(long_n - short_n), &(long_df / short_df))
+    let (forward_n, forward_r) = forward_point;
+    let (long_n, long_r) = long_point;
+    let pv = convention.pv(long_n, long_r) / convention.pv(forward_n, forward_r);
+    let n = long_n - forward_n;
+    convention.rate(&n, &pv)
 }
+
+fn forward_to_long_spot(
+    convention: &InterestConventions,
+    forward_point: &Point,
+    short_point: &Point,
+) -> f64 {
+    let (forward_n, forward_r) = forward_point;
+    let (short_n, short_r) = short_point;
+    let pv = convention.pv(short_n, short_r) * convention.pv(forward_n, forward_r);
+    let n = short_n + forward_n;
+    convention.rate(&n, &pv)
+}
+
+//  --- Par rate conversions ---
+// fn par_to_swap
+// fn par_to_discount
+// fn par_to_spot
+// fn par_to_forward
 
 //  --- Checks ---
 // (To be used with solver)
@@ -187,7 +225,7 @@ pub fn discount_and_swap_check(
 }
 
 // Should be zero.
-fn forward_check(
+fn forward_and_spot_check(
     convention: &InterestConventions,
     short_point: &Point,
     forward_point: &Point,
