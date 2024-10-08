@@ -12,13 +12,21 @@
 // 3.
 // All functions should take Vec<f64> as self.
 
-use dpm::interest::ops::InterestConventions;
 // TODO, all new functions should be 'const'.
-//use dpm::core::solver::{self, SolveEquation};
-//use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
-use dpm::interest::types::{discount_and_swap_check, swap_to_discount};
+
+use dpm::{
+    conventions,
+    interest::ops::{InterestConventions, TimeValueOfMoney},
+};
 
 fn main() {
+    let n = vec![0.5, 0.7];
+    let pv = vec![0.97, 0.96];
+    let conventions = InterestConventions::Simple;
+    let res: f64 = conventions.rate(&n, &pv);
+    println!("{:?}", res);
+
+    /*
     let df = vec![0.996489, 0.991306, 0.984494, 0.975616]; //, 0.964519];
     let n = vec![0.5, 0.5, 0.5, 0.5]; //, 0.5];
     let convention = InterestConventions::Discrete(
@@ -38,6 +46,7 @@ fn main() {
 
     println!("{:?}", testing);
     println!("{:?}", &res);
+    */
 
     // Forward rate solver.
     /*

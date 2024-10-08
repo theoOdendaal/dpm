@@ -72,6 +72,7 @@ fn main() {
     let discount_fractions = dcc.discount_days_fractions(&valuation_date, &seq_payment[1..]);
 
     let interest_fractions = dcc.interest_days_fractions(&seq_reset);
+
     let reset_fractions = dcc.discount_days_fractions(&valuation_date, &seq_reset);
 
     let path = "src/resources/curves";
@@ -84,4 +85,6 @@ fn main() {
 
     let discount_factors = interpolation::Exponential::interpolate(&x, &y, &discount_fractions);
     let forward_factors = interpolation::Exponential::interpolate(&x, &y, &reset_fractions);
+
+    println!("{:?}", reset_fractions);
 }

@@ -70,10 +70,10 @@ fn main() {
 
     let interest_rate_convention = InterestConventions::Simple;
 
-    let interest_rate_fractions1 =
+    let interest_rate_fractions1: Vec<f64> =
         interest_rate_convention.interest(&interest_fractions, &forward_rates1);
 
-    let interest_rate_fractions2 =
+    let interest_rate_fractions2: Vec<f64> =
         interest_rate_convention.interest(&interest_fractions, &forward_rates2);
 
     // Create a wrapper for this iterations, potentiall embed with the interest::ops.rs module.
