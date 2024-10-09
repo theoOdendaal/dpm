@@ -17,10 +17,13 @@
 // let new_rate = continuous.rate(&n, &pv);
 
 // TODO improve error handling.
-//  --- Errors ---
+
+//  --- Errors
 pub enum Error {
     Invalidf64,
 }
+
+//  --- Enums
 
 /// Interest calculation conventions.
 pub enum InterestConventions {
@@ -40,11 +43,14 @@ pub enum DiscreteCompoundingFrequencies {
     Annually,
 }
 
+//  --- Structs
+
 // InterestConventions structs.
 struct Simple;
 struct Discrete(DiscreteCompoundingFrequencies);
 struct Continuous;
 
+//  --- Traits
 pub trait TimeValueOfMoney<A, B = A, C = A> {
     /// Calculates the future value factor.
     fn fv(&self, n: &A, r: &B) -> C;
@@ -59,7 +65,7 @@ pub trait TimeValueOfMoney<A, B = A, C = A> {
     fn rate(&self, n: &A, pv: &B) -> C;
 }
 
-//  --- Standard library trait implementations ---
+//  --- Trait implementations: Concrete
 
 impl From<DiscreteCompoundingFrequencies> for f64 {
     fn from(value: DiscreteCompoundingFrequencies) -> Self {
@@ -87,12 +93,12 @@ impl TryFrom<f64> for DiscreteCompoundingFrequencies {
             3 => Ok(DiscreteCompoundingFrequencies::TriAnnually),
             2 => Ok(DiscreteCompoundingFrequencies::SemiAnnually),
             1 => Ok(DiscreteCompoundingFrequencies::Annually),
-            _ => Err(Error::Invalidf64), // TODO fix this leg.
+            _ => Err(Error::Invalidf64), // TODO refactor this leg by implementing proper error handling.
         }
     }
 }
 
-//  --- Concrete trait implementations ---
+//  --- Trait implementations: Blanket
 
 impl TimeValueOfMoney<f64> for Simple {
     fn fv(&self, n: &f64, r: &f64) -> f64 {
@@ -184,8 +190,6 @@ impl TimeValueOfMoney<f64> for InterestConventions {
     }
 }
 
-//  --- Blanket trati implementations ---
-
 impl<A, B> TimeValueOfMoney<Vec<A>, A> for B
 where
     A: std::ops::Neg<Output = A>,
@@ -236,7 +240,7 @@ where
     }
 }
 
-//  --- Tests ---
+//  --- Unit tests
 #[cfg(test)]
 mod test_interest_ops {
 

@@ -1,9 +1,13 @@
 //! Sequence creation.
 
+//  --- Traits
+
 /// Bound inclusive sequence.
 pub trait Sequence<A, B, C> {
     fn seq(lower: A, upper: A, step: B) -> C;
 }
+
+//  --- Trait implementations: Blanket
 
 impl<A, B> Sequence<A, B, Vec<A>> for A
 where
@@ -36,6 +40,8 @@ where
         sequence
     }
 }
+
+//  --- Unit tests
 
 #[cfg(test)]
 mod test_frequency {

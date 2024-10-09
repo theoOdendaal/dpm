@@ -2,8 +2,9 @@
 
 use chrono::{Datelike, NaiveDate};
 
-// TODO refactor
-
+// TODO add unit tests.
+// TODO add error handling?
+// TODO implement each of the below day count conventions.
 /*
 Day count conventions from Refinitiv:
 30/360
@@ -32,6 +33,9 @@ Actual/36525
 Actual/Actual CAD Convention
 */
 
+//  --- Errors
+
+//  --- Enums
 pub enum DayCountConventions {
     Thirty360Bond,
     ThirtyE360,
@@ -49,15 +53,7 @@ impl Default for DayCountConventions {
     }
 }
 
-//  --- Custom Traits ---
-pub trait DayCount<A, B, C> {
-    fn day_count(&self, start: &A, end: &B) -> C;
-
-    fn year_fraction(&self, start: &A, end: &B) -> C;
-}
-
-//  --- Structs ---
-
+//  --- Structs
 struct Thirty360Bond;
 struct ThirtyE360;
 //struct ThirtyE360ISDA;
@@ -67,8 +63,14 @@ struct Actual365Fixed;
 //struct Actual365Actual;
 //struct NonLeap365;
 
-//  --- Concrete trait implementations ---
+//  --- Traits
+pub trait DayCount<A, B, C> {
+    fn day_count(&self, start: &A, end: &B) -> C;
 
+    fn year_fraction(&self, start: &A, end: &B) -> C;
+}
+
+//  --- Trait implementations: Concrete
 impl DayCount<NaiveDate, NaiveDate, f64> for DayCountConventions {
     fn day_count(&self, start: &NaiveDate, end: &NaiveDate) -> f64 {
         match self {
@@ -160,14 +162,12 @@ impl DayCount<NaiveDate, NaiveDate, f64> for Actual365Fixed {
     }
 }
 
-//  --- Blanket trait implementations ---
-
+//  --- Trait implementations: Blanket
 impl<A, B, C> DayCount<Vec<A>, Vec<A>, Vec<B>> for C
 where
     C: DayCount<A, A, B>,
 {
     fn day_count(&self, start: &Vec<A>, end: &Vec<A>) -> Vec<B> {
-        //assert_eq!(start.len(), end.len()); // TODO remove this. Impl proper error handling.
         start
             .iter()
             .zip(end.iter())
@@ -176,7 +176,6 @@ where
     }
 
     fn year_fraction(&self, start: &Vec<A>, end: &Vec<A>) -> Vec<B> {
-        //assert_eq!(start.len(), end.len()); // TODO remove this. Impl proper error handling.
         start
             .iter()
             .zip(end.iter())
@@ -210,3 +209,5 @@ where
         end.iter().map(|a| self.year_fraction(start, a)).collect()
     }
 }
+
+//  --- Unit tests

@@ -1,28 +1,64 @@
 // TODO if xp = 0, return 1.0.
+// TODO complete this module.
 
-//  --- Trait definitions ---
-pub trait Interpolate<A, B> {
-    fn interpolate(x: &A, y: &A, xp: &B) -> B;
+//  --- Errors
+
+//  --- Enums
+#[derive(Debug)]
+pub enum InterpolationMethod {
+    Linear,
+    PiecewiseLinear,
+    NelsonSiegel,
+    NelsonSiegelSvensson,
+    CubicSpline,  // Focuses on smoothness between intervals.
+    CubicHermite, // Focuses on fitting both function and derivatives.
+    LogLinear,
+    Quadratic,
+    Exponential,
+    Akima,
 }
 
-//  --- Structs ---
+impl Default for InterpolationMethod {
+    fn default() -> Self {
+        Self::Linear
+    }
+}
+
+//  --- Structs
 pub struct Linear;
 pub struct LogLinear;
 pub struct Exponential;
 
-//  --- Implementations: Blanket ---
-impl<A> Interpolate<Vec<f64>, Vec<f64>> for A
-where
-    A: Interpolate<Vec<f64>, f64>,
-{
-    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &Vec<f64>) -> Vec<f64> {
-        xp.iter().map(|a| A::interpolate(x, y, a)).collect()
+//  --- Traits
+pub trait Interpolate<A, B> {
+    fn interpolate(&self, x: &A, y: &A, xp: &B) -> B;
+}
+
+//  --- Trait implementations: Concrete
+
+impl Interpolate<Vec<f64>, f64> for InterpolationMethod {
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        match self {
+            Self::Linear => Linear.interpolate(x, y, xp),
+            Self::PiecewiseLinear => todo!(),
+            Self::NelsonSiegel => todo!(),
+            Self::NelsonSiegelSvensson => todo!(),
+            Self::CubicSpline => todo!(),
+            Self::CubicHermite => todo!(),
+            Self::LogLinear => LogLinear.interpolate(x, y, xp),
+            Self::Quadratic => todo!(),
+            Self::Exponential => Exponential.interpolate(x, y, xp),
+            Self::Akima => todo!(),
+        }
     }
 }
 
-//  --- Implementations: Custom traits ---
 impl Interpolate<Vec<f64>, f64> for Linear {
-    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        if xp == &0.0 {
+            return 1.0;
+        };
+
         let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
@@ -32,7 +68,11 @@ impl Interpolate<Vec<f64>, f64> for Linear {
 }
 
 impl Interpolate<Vec<f64>, f64> for LogLinear {
-    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        if xp == &0.0 {
+            return 1.0;
+        };
+
         let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
@@ -43,7 +83,11 @@ impl Interpolate<Vec<f64>, f64> for LogLinear {
 }
 
 impl Interpolate<Vec<f64>, f64> for Exponential {
-    fn interpolate(x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        if xp == &0.0 {
+            return 1.0;
+        };
+
         let index = partition_index(x, xp);
         let (x1, x2) = (x[index], x[index + 1]);
         let (y1, y2) = (y[index], y[index + 1]);
@@ -52,7 +96,17 @@ impl Interpolate<Vec<f64>, f64> for Exponential {
     }
 }
 
-//  --- Helper functions ---
+//  --- Trait implementations: Blanket
+impl<A> Interpolate<Vec<f64>, Vec<f64>> for A
+where
+    A: Interpolate<Vec<f64>, f64>,
+{
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &Vec<f64>) -> Vec<f64> {
+        xp.iter().map(|a| self.interpolate(x, y, a)).collect()
+    }
+}
+
+//  --- Standalone functions
 /// Return the index of the point that partitions 'x'. The index
 /// is clipped at 0 and length less 2.
 fn partition_index(x: &[f64], xp: &f64) -> usize {

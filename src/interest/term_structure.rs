@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 // TODO create more Error variants.
 // TODO impl From<> for Error for more instances.
 
-//  --- Errors ---
+//  --- Errors
 
 #[derive(Debug)]
 pub enum Error {
@@ -42,7 +42,15 @@ impl From<chrono::format::ParseError> for Error {
     }
 }
 
-//  --- Trait definitions and blanket implementations ---
+//  --- Structs
+
+#[derive(Debug)]
+pub struct CurveParameters<A, B = A> {
+    x: Vec<A>,
+    y: Vec<B>,
+}
+
+//  --- Traits
 
 /// Requirement for a type to be classified as a term structure.
 pub trait TermStructure<A, B = A> {
@@ -136,11 +144,20 @@ pub trait TermStructure<A, B = A> {
     }
 }
 
-//  --- Default curve type construction ---
-#[derive(Debug)]
-pub struct CurveParameters<A, B = A> {
-    x: Vec<A>,
-    y: Vec<B>,
+//  --- Trait implementations: Concrete
+
+impl<A, B> From<BTreeMap<A, B>> for CurveParameters<f64>
+where
+    A: Copy + Into<f64>,
+    B: Copy + Into<f64>,
+{
+    fn from(value: BTreeMap<A, B>) -> Self {
+        let mut x: Vec<f64> = value.keys().copied().map(Into::into).collect();
+        let mut y: Vec<f64> = value.values().copied().map(Into::into).collect();
+        x.shrink_to_fit();
+        y.shrink_to_fit();
+        Self { x, y }
+    }
 }
 
 impl<A, B> CurveParameters<A, B>
@@ -167,20 +184,5 @@ where
 
     fn get_y(&self) -> Vec<B> {
         self.y.to_vec()
-    }
-}
-
-//  --- Implementations: From trait ---
-impl<A, B> From<BTreeMap<A, B>> for CurveParameters<f64>
-where
-    A: Copy + Into<f64>,
-    B: Copy + Into<f64>,
-{
-    fn from(value: BTreeMap<A, B>) -> Self {
-        let mut x: Vec<f64> = value.keys().copied().map(Into::into).collect();
-        let mut y: Vec<f64> = value.values().copied().map(Into::into).collect();
-        x.shrink_to_fit();
-        y.shrink_to_fit();
-        Self { x, y }
     }
 }

@@ -2,9 +2,12 @@
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 
 // TODO implement unit tests.
-
 // TODO Add error handling. Specifically when dates apprach NaiveDate::MIN or NaiveDate::MAX.
+// TODO add documentation.
 
+//  --- Errors
+
+//  --- Enums
 pub enum BusinessDayConventions {
     Actual,
     Following,
@@ -19,6 +22,13 @@ impl Default for BusinessDayConventions {
     }
 }
 
+//  --- Structs
+struct FollowingBusinessDay;
+struct PrecedingBusinessDay;
+struct ModifiedFollowingBusinessDay;
+struct ModifiedPrecedingBusinessDay;
+
+//  --- Traits
 pub trait BusinessDay<A, B = A> {
     fn business_day(&self, value: &A, public_holidays: &B) -> A;
 }
@@ -41,6 +51,7 @@ pub trait BusinessDayOperations: Sized {
     }
 }
 
+//  --- Trait implementations: Concrete
 impl BusinessDayOperations for NaiveDate {
     fn is_holiday(&self, public_holidays: &[Self]) -> bool {
         public_holidays.contains(self)
@@ -66,11 +77,6 @@ impl BusinessDayOperations for NaiveDate {
         *self - Days::new(1)
     }
 }
-
-struct FollowingBusinessDay;
-struct PrecedingBusinessDay;
-struct ModifiedFollowingBusinessDay;
-struct ModifiedPrecedingBusinessDay;
 
 impl<A> BusinessDay<A, Vec<A>> for FollowingBusinessDay
 where
@@ -143,6 +149,7 @@ where
     }
 }
 
+//  --- Trait implementations: Blanket
 impl<A, B> BusinessDay<Vec<A>, Vec<A>> for B
 where
     A: BusinessDayOperations + Copy,
@@ -156,3 +163,5 @@ where
             .collect()
     }
 }
+
+//  --- Unit tests

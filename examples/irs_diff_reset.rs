@@ -87,8 +87,8 @@ fn main() {
 
     let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
 
-    let discount_factors = interpolation::Exponential::interpolate(&x, &y, &discount_fractions);
-    let forward_factors = interpolation::Exponential::interpolate(&x, &y, &reset_fractions);
+    let discount_factors = interpolation::Exponential.interpolate(&x, &y, &discount_fractions);
+    let forward_factors = interpolation::Exponential.interpolate(&x, &y, &reset_fractions);
 
     println!("{:?}", reset_fractions);
 }

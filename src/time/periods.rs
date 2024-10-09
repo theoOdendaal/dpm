@@ -1,5 +1,7 @@
 use chrono::NaiveDate;
 
+//  --- Enums
+
 #[derive(Clone, Debug)]
 pub enum Periods {
     Days(u32),
@@ -7,6 +9,8 @@ pub enum Periods {
     Months(u32),
     Years(u32),
 }
+
+//  --- Trait implementations: Concrete
 
 impl std::ops::Add<Periods> for NaiveDate {
     type Output = NaiveDate;

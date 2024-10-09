@@ -1,6 +1,3 @@
-// TODO, use &[T] rather than &Vec<T>.
-// TODO, implement CLI functionality.
-
 // 1.
 // Distinguish between 'static' and 'market data'.
 // 'Static' is contractual data, where 'market data' is curves, rates etc.
@@ -11,8 +8,6 @@
 
 // 3.
 // All functions should take Vec<f64> as self.
-
-// TODO, all new functions should be 'const'.
 
 fn main() {
     /*

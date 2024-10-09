@@ -6,11 +6,10 @@ use chrono::{Months, NaiveDate};
 use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
-
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{CurveParameters, TermStructure};
 use dpm::iso::iso3166::CountryTwoCode;
-use dpm::math::interpolation::{self, Interpolate};
+use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
 
 use dpm::table_print;
@@ -24,6 +23,7 @@ fn main() {
     let step = Months::new(3);
     let bdc = BusinessDayConventions::default();
     let dcc = DayCountConventions::default();
+    let interpolation_method = InterpolationMethod::LogLinear;
 
     let country_code: String = CountryTwoCode::from_str("ZA").unwrap().into();
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
@@ -31,7 +31,6 @@ fn main() {
     let seq_res = NaiveDate::seq(start, end, step);
     let seq_res = bdc.business_day(&seq_res, &public_holidays);
 
-    // FIXME, the below few lines are giving errors after the module was refactored.
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_res[1..].to_vec());
     let interest_fractions = dcc.year_fraction(&seq_res, &seq_res[1..].to_vec());
 
@@ -47,7 +46,7 @@ fn main() {
 
     let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
 
-    let discount_factors = interpolation::Exponential::interpolate(&x, &y, &discount_fractions);
+    let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
 
     let mut forward_rates: Vec<f64> = discount_factors
         .iter()
