@@ -29,11 +29,11 @@ pub enum Error {
 pub enum InterestConventions {
     /// Simple interest calculation convention.
     Simple,
-    
+
     /// Discrete compounding interest calculation convention.
     Discrete(DiscreteCompoundingFrequencies),
 
-    // Continiously compounding interest calculation convention. 
+    // Continiously compounding interest calculation convention.
     Continuous,
 }
 
