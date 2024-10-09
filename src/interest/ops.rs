@@ -16,6 +16,7 @@
 // let pv = Simple.pv(&n, &r);
 // let new_rate = continuous.rate(&n, &pv);
 
+// TODO improve error handling.
 //  --- Errors ---
 pub enum Error {
     Invalidf64,

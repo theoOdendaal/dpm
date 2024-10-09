@@ -14,11 +14,6 @@
 
 // TODO, all new functions should be 'const'.
 
-use dpm::{
-    conventions,
-    interest::ops::{InterestConventions, TimeValueOfMoney},
-};
-
 fn main() {
     /*
     let n = vec![0.5, 0.7];

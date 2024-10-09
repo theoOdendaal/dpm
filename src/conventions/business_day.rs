@@ -1,6 +1,8 @@
 /// Business day convention
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 
+// TODO implement unit tests.
+
 pub enum BusinessDayConventions {
     Actual,
     Following,
@@ -15,59 +17,28 @@ impl Default for BusinessDayConventions {
     }
 }
 
-pub trait BusinessDay<A = Self> {
-    fn business_day(&self, convention: &BusinessDayConventions, public_holidays: &[A]) -> Self;
+/// Adjust a value based on a specified convention.
+pub trait BusinessDay<A, B = A> {
+    fn business_day(&self, value: &A, public_holidays: &B) -> A;
 }
 
-impl BusinessDay for NaiveDate {
-    fn business_day(
-        &self,
-        convention: &BusinessDayConventions,
-        public_holidays: &[NaiveDate],
-    ) -> Self {
-        match convention {
-            BusinessDayConventions::Actual => *self,
-            BusinessDayConventions::Following => {
-                FollowingBusinessDay::adjust_to_business_day(self, public_holidays)
-            }
-            BusinessDayConventions::Preceding => {
-                PrecedingBusinessDay::adjust_to_business_day(self, public_holidays)
-            }
-            BusinessDayConventions::ModifiedFollowing => {
-                ModifiedFollowingBusinessDay::adjust_to_business_day(self, public_holidays)
-            }
-            BusinessDayConventions::ModifiedPreceding => {
-                ModifiedPrecedingBusinessDay::adjust_to_business_day(self, public_holidays)
-            }
-        }
-    }
-}
+// Operations required for business day operations.
+pub trait BusinessDayOperations: Sized {
+    fn is_holiday(&self, public_holidays: &[Self]) -> bool;
 
-impl BusinessDay<NaiveDate> for Vec<NaiveDate> {
-    fn business_day(
-        &self,
-        convention: &BusinessDayConventions,
-        public_holidays: &[NaiveDate],
-    ) -> Self {
-        self.iter()
-            .map(|x| x.business_day(convention, public_holidays))
-            .collect()
-    }
-}
-
-struct FollowingBusinessDay;
-struct PrecedingBusinessDay;
-struct ModifiedFollowingBusinessDay;
-struct ModifiedPrecedingBusinessDay;
-
-trait BusinessDayOperations<A = Self, B = A> {
-    fn is_holiday(&self, public_holidays: &[B]) -> bool;
     fn is_weekend(&self) -> bool;
-    fn is_different_month(&self, other: &Self) -> bool;
-}
 
-trait ConventionOperations<A: BusinessDayOperations, B = A> {
-    fn adjust_to_business_day(date: &A, public_holidays: &[B]) -> A;
+    fn get_year(&self) -> i32;
+
+    fn get_month(&self) -> u32;
+
+    fn add_day(&self) -> Self;
+
+    fn sub_day(&self) -> Self;
+
+    fn is_next_month(&self, other: &Self) -> bool {
+        self.get_year() != other.get_year() || self.get_month() != other.get_month()
+    }
 }
 
 impl BusinessDayOperations for NaiveDate {
@@ -79,52 +50,109 @@ impl BusinessDayOperations for NaiveDate {
         matches!(self.weekday(), Weekday::Sat | Weekday::Sun)
     }
 
-    fn is_different_month(&self, other: &Self) -> bool {
-        self.year() != other.year() || self.month() != other.month()
+    fn get_year(&self) -> i32 {
+        self.year()
+    }
+
+    fn get_month(&self) -> u32 {
+        self.month()
+    }
+
+    fn add_day(&self) -> Self {
+        *self + Days::new(1)
+    }
+
+    fn sub_day(&self) -> Self {
+        *self - Days::new(1)
     }
 }
 
-impl ConventionOperations<NaiveDate> for FollowingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
-        let mut following_date = *date;
+struct FollowingBusinessDay;
+struct PrecedingBusinessDay;
+struct ModifiedFollowingBusinessDay;
+struct ModifiedPrecedingBusinessDay;
+
+impl<A> BusinessDay<A, Vec<A>> for FollowingBusinessDay
+where
+    A: BusinessDayOperations + Copy,
+{
+    fn business_day(&self, value: &A, public_holidays: &Vec<A>) -> A {
+        let mut following_date = *value;
         while following_date.is_holiday(public_holidays) || following_date.is_weekend() {
-            following_date = following_date + Days::new(1);
+            following_date = following_date.add_day();
         }
         following_date
     }
 }
 
-impl ConventionOperations<NaiveDate> for PrecedingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
-        let mut previous_date = *date;
-        while previous_date.is_holiday(public_holidays) || previous_date.is_weekend() {
-            previous_date = previous_date - Days::new(1);
+impl<A> BusinessDay<A, Vec<A>> for PrecedingBusinessDay
+where
+    A: BusinessDayOperations + Copy,
+{
+    fn business_day(&self, value: &A, public_holidays: &Vec<A>) -> A {
+        let mut preceding_date = *value;
+        while preceding_date.is_holiday(public_holidays) || preceding_date.is_weekend() {
+            preceding_date = preceding_date.sub_day();
         }
-        previous_date
+        preceding_date
     }
 }
 
-impl ConventionOperations<NaiveDate> for ModifiedFollowingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
-        let mut following_date =
-            FollowingBusinessDay::adjust_to_business_day(date, public_holidays);
-
-        if date.is_different_month(&following_date) {
-            following_date = PrecedingBusinessDay::adjust_to_business_day(date, public_holidays);
+impl<A> BusinessDay<A, Vec<A>> for ModifiedFollowingBusinessDay
+where
+    A: BusinessDayOperations + Copy,
+{
+    fn business_day(&self, value: &A, public_holidays: &Vec<A>) -> A {
+        let mut following_date = FollowingBusinessDay.business_day(value, public_holidays);
+        if following_date.is_next_month(value) {
+            following_date = PrecedingBusinessDay.business_day(value, public_holidays);
         }
-
         following_date
     }
 }
 
-impl ConventionOperations<NaiveDate> for ModifiedPrecedingBusinessDay {
-    fn adjust_to_business_day(date: &NaiveDate, public_holidays: &[NaiveDate]) -> NaiveDate {
-        let mut previous_date = PrecedingBusinessDay::adjust_to_business_day(date, public_holidays);
-
-        if date.is_different_month(&previous_date) {
-            previous_date = FollowingBusinessDay::adjust_to_business_day(date, public_holidays);
+impl<A> BusinessDay<A, Vec<A>> for ModifiedPrecedingBusinessDay
+where
+    A: BusinessDayOperations + Copy,
+{
+    fn business_day(&self, value: &A, public_holidays: &Vec<A>) -> A {
+        let mut preceding_date = PrecedingBusinessDay.business_day(value, public_holidays);
+        if preceding_date.is_next_month(value) {
+            preceding_date = FollowingBusinessDay.business_day(value, public_holidays);
         }
+        preceding_date
+    }
+}
 
-        previous_date
+impl<A> BusinessDay<A, Vec<A>> for BusinessDayConventions
+where
+    A: BusinessDayOperations + Copy,
+{
+    fn business_day(&self, value: &A, public_holidays: &Vec<A>) -> A {
+        match self {
+            Self::Actual => *value,
+            Self::Following => FollowingBusinessDay.business_day(value, public_holidays),
+            Self::Preceding => PrecedingBusinessDay.business_day(value, public_holidays),
+            Self::ModifiedFollowing => {
+                ModifiedFollowingBusinessDay.business_day(value, public_holidays)
+            }
+            Self::ModifiedPreceding => {
+                ModifiedPrecedingBusinessDay.business_day(value, public_holidays)
+            }
+        }
+    }
+}
+
+impl<A, B> BusinessDay<Vec<A>, Vec<A>> for B
+where
+    A: BusinessDayOperations + Copy,
+    B: BusinessDay<A, Vec<A>>,
+{
+    fn business_day(&self, value: &Vec<A>, public_holidays: &Vec<A>) -> Vec<A> {
+        value
+            .iter()
+            .copied()
+            .map(|a| self.business_day(&a, public_holidays))
+            .collect()
     }
 }

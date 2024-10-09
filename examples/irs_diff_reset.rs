@@ -64,10 +64,11 @@ fn main() {
     ];
 
     // Ops
-    let seq_reset = NaiveDate::seq(inception_date, termination_date, reset_tenor)
-        .business_day(&bdc, &public_holidays);
-    let seq_payment = NaiveDate::seq(inception_date, termination_date, payment_tenor)
-        .business_day(&bdc, &public_holidays);
+    let seq_reset = NaiveDate::seq(inception_date, termination_date, reset_tenor);
+    let seq_payment = NaiveDate::seq(inception_date, termination_date, payment_tenor);
+
+    let seq_reset = bdc.business_day(&seq_reset, &public_holidays);
+    let seq_payment = bdc.business_day(&seq_payment, &public_holidays);
 
     let discount_fractions = dcc.discount_days_fractions(&valuation_date, &seq_payment[1..]);
 
