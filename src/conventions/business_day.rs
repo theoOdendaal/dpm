@@ -17,12 +17,10 @@ impl Default for BusinessDayConventions {
     }
 }
 
-/// Adjust a value based on a specified convention.
 pub trait BusinessDay<A, B = A> {
     fn business_day(&self, value: &A, public_holidays: &B) -> A;
 }
 
-// Operations required for business day operations.
 pub trait BusinessDayOperations: Sized {
     fn is_holiday(&self, public_holidays: &[Self]) -> bool;
 
