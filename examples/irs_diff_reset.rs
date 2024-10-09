@@ -4,7 +4,7 @@ use chrono::{Months, NaiveDate};
 use dpm::{
     conventions::{
         business_day::{BusinessDay, BusinessDayConventions},
-        day_count::DayCountConventions,
+        day_count::{DayCount, DayCountConventions},
     },
     core::sequence::Sequence,
     interest::term_structure::{CurveParameters, TermStructure},
@@ -70,11 +70,14 @@ fn main() {
     let seq_reset = bdc.business_day(&seq_reset, &public_holidays);
     let seq_payment = bdc.business_day(&seq_payment, &public_holidays);
 
-    let discount_fractions = dcc.discount_days_fractions(&valuation_date, &seq_payment[1..]);
+    let discount_fractions = dcc.year_fraction(&valuation_date, &seq_payment[1..].to_vec());
 
-    let interest_fractions = dcc.interest_days_fractions(&seq_reset);
+    let interest_fractions = dcc.year_fraction(
+        &seq_reset[..seq_reset.len() - 1].to_vec(),
+        &seq_reset[1..].to_vec(),
+    );
 
-    let reset_fractions = dcc.discount_days_fractions(&valuation_date, &seq_reset);
+    let reset_fractions = dcc.year_fraction(&valuation_date, &seq_reset);
 
     let path = "src/resources/curves";
     let dir = format!("{}/zar_swap.txt", path);

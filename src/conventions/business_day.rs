@@ -3,6 +3,8 @@ use chrono::{Datelike, Days, NaiveDate, Weekday};
 
 // TODO implement unit tests.
 
+// TODO Add error handling. Specifically when dates apprach NaiveDate::MIN or NaiveDate::MAX.
+
 pub enum BusinessDayConventions {
     Actual,
     Following,

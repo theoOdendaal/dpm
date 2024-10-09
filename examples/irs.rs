@@ -4,10 +4,10 @@ use std::str::FromStr;
 use chrono::{Months, NaiveDate};
 
 use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
-use dpm::conventions::day_count::DayCountConventions;
+use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
 
-use dpm::interest::ops::{DiscreteCompoundingFrequencies, InterestConventions, TimeValueOfMoney};
+use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{CurveParameters, TermStructure};
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{self, Interpolate};
@@ -31,9 +31,9 @@ fn main() {
     let seq_res = NaiveDate::seq(start, end, step);
     let seq_res = bdc.business_day(&seq_res, &public_holidays);
 
-    let discount_fractions = dcc.discount_days_fractions(&valuation_date, &seq_res[1..]);
-
-    let interest_fractions = dcc.interest_days_fractions(&seq_res);
+    // FIXME, the below few lines are giving errors after the module was refactored.
+    let discount_fractions = dcc.year_fraction(&valuation_date, &seq_res[1..].to_vec());
+    let interest_fractions = dcc.year_fraction(&seq_res, &seq_res[1..].to_vec());
 
     let spot = 0.07258;
     let nominal = 400_000_000.0;
