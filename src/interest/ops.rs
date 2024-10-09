@@ -27,8 +27,13 @@ pub enum Error {
 
 /// Interest calculation conventions.
 pub enum InterestConventions {
+    /// Simple interest calculation convention.
     Simple,
+    
+    /// Discrete compounding interest calculation convention.
     Discrete(DiscreteCompoundingFrequencies),
+
+    // Continiously compounding interest calculation convention. 
     Continuous,
 }
 
@@ -45,7 +50,6 @@ pub enum DiscreteCompoundingFrequencies {
 
 //  --- Structs
 
-// InterestConventions structs.
 struct Simple;
 struct Discrete(DiscreteCompoundingFrequencies);
 struct Continuous;
