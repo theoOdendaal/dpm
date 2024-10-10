@@ -3,6 +3,7 @@
 // TODO ensure consistency of documentation accross all modules !!!
 // TODO i really like the design pattern of the convention::business_day and convention::day_count. Reuse this where required.
 // TODO when implementing a trait for various generics, no two implementation can produce the same output, as this creates ambiguity.
+// Make sure Default trait in implemented for all enums, unless explicit reason exist why this is not appropriate.
 
 //  --- Miscellaneous
 // TODO all new functions should be 'const'.

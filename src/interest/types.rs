@@ -56,6 +56,7 @@
 // The purpose of module is not to convert individual rates, but rather a curve.
 use super::ops::{InterestConventions, TimeValueOfMoney};
 
+//  --- Types
 type Point = (f64, f64);
 type Points<'a> = (&'a [f64], &'a [f64]);
 
