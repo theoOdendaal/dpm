@@ -97,6 +97,7 @@ impl Interpolate<Vec<f64>, f64> for Linear {
 }
 
 // TODO is this really CubicHermite? Isn't 3 + 1 points required?
+// TODO look at this guidance: https://www.calculatorsoup.com/calculators/algebra/cubicequation.php
 impl Interpolate<Vec<f64>, f64> for CubicHermite {
     fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
         if xp <= &0.0 {

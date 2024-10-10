@@ -9,7 +9,19 @@
 // 3.
 // All functions should take Vec<f64> as self.
 
+use dpm::math::interpolation::{Interpolate, InterpolationMethod};
+
 fn main() {
+    let x = vec![0.2, 0.5, 1.1, 1.7];
+    let y = vec![0.7, 0.9, 1.2, 1.9];
+    let xp = 0.3;
+
+    let method = InterpolationMethod::CubicHermite;
+
+    let res = method.interpolate(&x, &y, &xp);
+
+    println!("{:?}", res);
+
     /*
     let n = vec![0.5, 0.7];
     let pv = vec![0.97, 0.96];
