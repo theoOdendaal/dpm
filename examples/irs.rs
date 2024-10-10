@@ -59,17 +59,38 @@ fn main() {
         .zip(interest_fractions.iter())
         .map(|((a, b), c)| (b / a - 1.0) / c)
         .collect();
-
     forward_rates.insert(0, 0.0);
+    assert_eq!(discount_factors.len(), forward_rates.len());
+
+    // FIXME, this forward rate logic is messy. Clean up and make sure it will work on all instances.
+    let last_zero_idx = forward_rates.iter().rposition(|&a| a == 0.0).map(|a| a + 1);
 
     let forward_rates1: Vec<f64> = forward_rates
         .iter()
-        .map(|a| if a <= &0.0 { spot } else { *a + spread })
+        .enumerate()
+        .map(|(i, &a)| {
+            if Some(i) == last_zero_idx {
+                spot + spread
+            } else if a > 0.0 {
+                a + spread
+            } else {
+                0.0
+            }
+        })
         .collect();
 
     let forward_rates2: Vec<f64> = forward_rates
         .iter()
-        .map(|a| if a <= &0.0 { spot } else { *a })
+        .enumerate()
+        .map(|(i, &a)| {
+            if Some(i) == last_zero_idx {
+                spot
+            } else if a > 0.0 {
+                a
+            } else {
+                0.0
+            }
+        })
         .collect();
 
     let interest_rate_fractions1 =

@@ -4,6 +4,7 @@ use chrono::{Datelike, Days, NaiveDate, Weekday};
 // TODO implement unit tests.
 // TODO Add error handling. Specifically when dates apprach NaiveDate::MIN or NaiveDate::MAX.
 // TODO add documentation.
+// FIXME, both the Effective and Termination date should not be adjusted in terms of the business day convention.
 
 //  --- Errors
 
