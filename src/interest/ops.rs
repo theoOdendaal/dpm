@@ -48,6 +48,18 @@ pub enum DiscreteCompoundingFrequencies {
     Annually,
 }
 
+impl Default for InterestConventions {
+    fn default() -> Self {
+        Self::Discrete(DiscreteCompoundingFrequencies::default())
+    }
+}
+
+impl Default for DiscreteCompoundingFrequencies {
+    fn default() -> Self {
+        Self::Annually
+    }
+}
+
 //  --- Structs
 
 struct Simple;
@@ -55,7 +67,7 @@ struct Discrete(DiscreteCompoundingFrequencies);
 struct Continuous;
 
 //  --- Traits
-pub trait TimeValueOfMoney<A, B = A, C = A> {
+pub trait TimeValueOfMoney<A, B = A, C = A, D = A> {
     /// Calculates the future value factor.
     fn fv(&self, n: &A, r: &B) -> C;
 
@@ -67,6 +79,9 @@ pub trait TimeValueOfMoney<A, B = A, C = A> {
 
     /// Infers the interest rate.
     fn rate(&self, n: &A, pv: &B) -> C;
+
+    // FIXME, not certain I really like this implementation? Maybe change argument names?
+    fn prod(&self, value: &A, other: &B) -> C;
 }
 
 //  --- Trait implementations: Concrete
@@ -120,6 +135,10 @@ impl TimeValueOfMoney<f64> for Simple {
     fn rate(&self, n: &f64, pv: &f64) -> f64 {
         ((1.0 / pv) - 1.0) / n
     }
+
+    fn prod(&self, value: &f64, other: &f64) -> f64 {
+        value * other
+    }
 }
 
 impl TimeValueOfMoney<f64> for Discrete {
@@ -140,6 +159,10 @@ impl TimeValueOfMoney<f64> for Discrete {
         let m: f64 = self.0.into();
         ((1.0 / pv).powf(1.0 / (n * m)) - 1.0) * m
     }
+
+    fn prod(&self, value: &f64, other: &f64) -> f64 {
+        value * other
+    }
 }
 
 impl TimeValueOfMoney<f64> for Continuous {
@@ -157,6 +180,10 @@ impl TimeValueOfMoney<f64> for Continuous {
 
     fn rate(&self, n: &f64, pv: &f64) -> f64 {
         (1.0 / pv).ln() / n
+    }
+
+    fn prod(&self, value: &f64, other: &f64) -> f64 {
+        value * other
     }
 }
 
@@ -192,6 +219,14 @@ impl TimeValueOfMoney<f64> for InterestConventions {
             Self::Continuous => Continuous.rate(n, pv),
         }
     }
+
+    fn prod(&self, value: &f64, other: &f64) -> f64 {
+        match self {
+            Self::Simple => Simple.prod(value, other),
+            Self::Discrete(x) => Discrete(*x).prod(value, other),
+            Self::Continuous => Continuous.prod(value, other),
+        }
+    }
 }
 
 impl<A, B> TimeValueOfMoney<Vec<A>, A> for B
@@ -213,6 +248,10 @@ where
 
     fn rate(&self, n: &Vec<A>, pv: &A) -> Vec<A> {
         n.iter().map(|a| self.rate(a, pv)).collect()
+    }
+
+    fn prod(&self, value: &Vec<A>, other: &A) -> Vec<A> {
+        value.iter().map(|a| self.prod(a, other)).collect()
     }
 }
 
@@ -240,6 +279,14 @@ where
         n.iter()
             .zip(pv.iter())
             .map(|(a, b)| self.rate(a, b))
+            .collect()
+    }
+
+    fn prod(&self, value: &Vec<A>, other: &Vec<A>) -> Vec<A> {
+        value
+            .iter()
+            .zip(other.iter())
+            .map(|(a, b)| self.prod(a, b))
             .collect()
     }
 }

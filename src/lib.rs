@@ -1,12 +1,15 @@
-// --- !!! Important !!! ---
+// ---  !!! Important
 // TODO add detailed documentation for each module.
 // TODO ensure consistency of documentation accross all modules !!!
 // TODO i really like the design pattern of the convention::business_day and convention::day_count. Reuse this where required.
+// TODO when implementing a trait for various generics, no two implementation can produce the same output, as this creates ambiguity.
 
-//  --- Miscellaneous ---
+//  --- Miscellaneous
 // TODO all new functions should be 'const'.
 // TODO use &[T] rather than &Vec<T>.
 // TODO implement CLI functionality.
+// TODO add unit tests for each module.
+// TODO unit tests should also test errors.
 
 //  --- Modules ---
 pub mod conventions {

@@ -16,16 +16,24 @@ use dpm::table_print;
 
 const CLIENT_VALUE: f64 = 2_101_754.992_13;
 
+// FIXME this example has cash flows for the periods before the valuation date.
+
 fn main() {
     let start = NaiveDate::from_ymd_opt(2009, 10, 15).unwrap();
     let end = NaiveDate::from_ymd_opt(2039, 9, 23).unwrap();
     let valuation_date = NaiveDate::from_ymd_opt(2022, 12, 31).unwrap();
     let step = Months::new(3);
+    let spot = 0.07258;
+    let nominal = 400_000_000.0;
+    let spread = 0.0006;
+    let country = "ZA";
+
     let bdc = BusinessDayConventions::default();
     let dcc = DayCountConventions::default();
-    let interpolation_method = InterpolationMethod::LogLinear;
+    let interpolation_method = InterpolationMethod::default();
+    let interest_rate_convention = InterestConventions::Simple;
 
-    let country_code: String = CountryTwoCode::from_str("ZA").unwrap().into();
+    let country_code: String = CountryTwoCode::from_str(country).unwrap().into();
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
 
     let seq_res = NaiveDate::seq(start, end, step);
@@ -33,10 +41,6 @@ fn main() {
 
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_res[1..].to_vec());
     let interest_fractions = dcc.year_fraction(&seq_res, &seq_res[1..].to_vec());
-
-    let spot = 0.07258;
-    let nominal = 400_000_000.0;
-    let spread = 0.0006;
 
     let path = "src/resources/curves";
     let dir = format!("{}/zar_disc_csa.txt", path);
@@ -68,35 +72,16 @@ fn main() {
         .map(|a| if a <= &0.0 { spot } else { *a })
         .collect();
 
-    let interest_rate_convention = InterestConventions::Simple;
-
-    let interest_rate_fractions1: Vec<f64> =
+    let interest_rate_fractions1 =
         interest_rate_convention.interest(&interest_fractions, &forward_rates1);
 
-    let interest_rate_fractions2: Vec<f64> =
+    let interest_rate_fractions2 =
         interest_rate_convention.interest(&interest_fractions, &forward_rates2);
 
-    // Create a wrapper for this iterations, potentiall embed with the interest::ops.rs module.
-    let seq_int1: Vec<f64> = interest_rate_fractions1
-        .iter()
-        .map(|a| a * nominal)
-        .collect();
-    let seq_int2: Vec<f64> = interest_rate_fractions2
-        .iter()
-        .map(|a| a * nominal)
-        .collect();
-
-    let present_values1: Vec<f64> = seq_int1
-        .iter()
-        .zip(discount_factors.iter())
-        .map(|(a, b)| a * b)
-        .collect();
-
-    let present_values2: Vec<f64> = seq_int2
-        .iter()
-        .zip(discount_factors.iter())
-        .map(|(a, b)| a * b)
-        .collect();
+    let seq_int1 = interest_rate_convention.prod(&interest_rate_fractions1, &nominal);
+    let seq_int2 = interest_rate_convention.prod(&interest_rate_fractions2, &nominal);
+    let present_values1 = interest_rate_convention.prod(&seq_int1, &discount_factors);
+    let present_values2 = interest_rate_convention.prod(&seq_int2, &discount_factors);
 
     let pv1_sum = present_values1.iter().sum::<f64>();
     let pv2_sum = present_values2.iter().sum::<f64>();

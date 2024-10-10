@@ -20,7 +20,7 @@ pub enum InterpolationMethod {
 
 impl Default for InterpolationMethod {
     fn default() -> Self {
-        Self::Linear
+        Self::LogLinear
     }
 }
 
