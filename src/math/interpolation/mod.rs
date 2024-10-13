@@ -2,6 +2,8 @@
 // TODO complete this module.
 // TODO implement unit tests.
 // TODO use WolframAlpha to create unit tests.
+// TODO first x and y values should always be x0 and y0. Make these updated in the code.
+// TODO, fit curves taking into account all available x and y points, don't do it on isolated points.
 
 // To solve for the coefficients of polynomial functions, you generally use systems of linear equations,
 // especially when you have a set of points that the polynomial must pass through.
@@ -18,6 +20,8 @@
 // Fit Nelson-Siegel similar to how a neural network parameters are set.
 
 // Research 'Lagrange Interpolation'.
+
+// https://medium.com/theleanprogrammer/polynomial-curve-fitting-in-machine-learning-aa0c967d789b
 
 //  --- Errors
 
@@ -38,6 +42,7 @@ pub enum InterpolationMethod {
     Quadratic,
     Exponential,
     Akima,
+    TempCubic,
 }
 
 impl Default for InterpolationMethod {
@@ -52,6 +57,7 @@ pub struct CubicHermite;
 pub struct LogLinear;
 pub struct Quadratic;
 pub struct Exponential;
+pub struct TempCubic;
 
 //  --- Traits
 pub trait Interpolate<A, B> {
@@ -73,6 +79,7 @@ impl Interpolate<Vec<f64>, f64> for InterpolationMethod {
             Self::Quadratic => Quadratic.interpolate(x, y, xp),
             Self::Exponential => Exponential.interpolate(x, y, xp),
             Self::Akima => todo!(),
+            Self::TempCubic => TempCubic.interpolate(x, y, xp),
         }
     }
 }
@@ -186,6 +193,21 @@ impl Interpolate<Vec<f64>, f64> for Exponential {
     }
 }
 
+impl Interpolate<Vec<f64>, f64> for TempCubic {
+    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
+        if xp <= &0.0 {
+            if xp < &0.0 {
+                return 0.0;
+            } else {
+                return 1.0;
+            }
+        };
+        let (a, b, c, d) = solve_for_cubic_coefficients(x, y);
+        //println!("{}-{}-{}-{}", a, b, c, d);
+        cubic_function(&a, &b, &c, &d, xp)
+    }
+}
+
 //  --- Trait implementations: Blanket
 impl<A> Interpolate<Vec<f64>, Vec<f64>> for A
 where
@@ -239,24 +261,80 @@ fn cubic_coefficients(x: CubicPoints, y: CubicPoints) -> (f64, f64, f64, f64) {
     todo!()
 }
 
-/*
-
-fn cubic_h1(t: &f64) -> f64 {
-    2.0 * t.powf(3.0) - 3.0 * t.powf(2.0) + 1.0
+fn quadratic_function(a: &f64, b: &f64, c: &f64, x: &f64) -> f64 {
+    a * x.powf(2.0) + b * x + c
 }
 
-fn cubic_h2(t: &f64) -> f64 {
-    -2.0 * t.powf(3.0) + 3.0 * t.powf(2.0)
+pub fn cubic_function(a: &f64, b: &f64, c: &f64, d: &f64, x: &f64) -> f64 {
+    a * x.powi(3) + b * x.powi(2) + c * x + d
 }
 
-fn cubic_h3(t: &f64) -> f64 {
-    t.powf(3.0) - 2.0 * t.powf(2.0) + t
+fn polynominal_function(coefficients: &[f64], x: &f64) -> f64 {
+    coefficients
+        .iter()
+        .enumerate()
+        .map(|(i, c)| c * x.powi(i as i32))
+        .sum::<f64>()
 }
 
-fn cubic_h4(t: &f64) -> f64 {
-    t.powf(3.0) - t.powf(2.0)
+// TODO Update to allow coefficients to be passed as an array. This will allow flexibility in terms of the polynomial degrees.
+pub fn solve_for_cubic_coefficients(x: &[f64], y: &[f64]) -> (f64, f64, f64, f64) {
+    assert_eq!(x.len(), y.len());
+
+    let (mut a, mut b, mut c, mut d) = (0.0, 0.0, 0.0, 0.0);
+    //let coefficients = [0.0; 4];
+
+    let learning_rate = 1e-4;
+    let epochs = 10_000_000;
+    let n = x.len() as f64;
+
+    for _ in 0..epochs {
+        let mut grad_a = 0.0;
+        let mut grad_b = 0.0;
+        let mut grad_c = 0.0;
+        let mut grad_d = 0.0;
+        //let mut gradients = [0.0; 4];
+
+        let mut total_error = 0.0;
+
+        for (xi, yi) in x.iter().zip(y.iter()) {
+            let predict = cubic_function(&a, &b, &c, &d, xi);
+            let error = yi - predict;
+            let error_derivative = -2.0 * error;
+            total_error += (yi - predict).powi(2);
+
+            let weight = 1.0; // / (1.0 + xi.abs());
+            grad_a += weight * error_derivative * xi.powi(3);
+            grad_b += weight * error_derivative * xi.powi(2);
+            grad_c += weight * error_derivative * xi;
+            grad_d += weight * error_derivative;
+
+            //for (i, c) in gradients.iter_mut().enumerate() {
+            //    *c += weight * error_derivative.powi(i as i32);
+            //}
+        }
+        let grad_clip_threshold = 1e-1;
+        grad_a = grad_a.min(grad_clip_threshold).max(-grad_clip_threshold);
+        grad_b = grad_b.min(grad_clip_threshold).max(-grad_clip_threshold);
+        grad_c = grad_c.min(grad_clip_threshold).max(-grad_clip_threshold);
+        grad_d = grad_d.min(grad_clip_threshold).max(-grad_clip_threshold);
+
+        a -= learning_rate * grad_a / n;
+        b -= learning_rate * grad_b / n;
+        c -= learning_rate * grad_c / n;
+        d -= learning_rate * grad_d / n;
+
+        println!(
+            "Coefficients: a = {:.6}, b = {:.6}, c = {:.6}, d = {:.6}, error = {:.6}",
+            a, b, c, d, total_error
+        );
+        if total_error.abs() < 1e-8 {
+            return (a, b, c, d);
+        }
+    }
+
+    (a, b, c, d)
 }
-*/
 
 //  --- Unit tests
 #[cfg(test)]

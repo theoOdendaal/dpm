@@ -1,4 +1,8 @@
-// TODO to be used for not only type conversion, but also to solve for the hypo derivative fixed interest rate, used as part of hedge accounting.
+// To be used for:
+//  1. Type conversion
+//  2. Determining polynomial coefficients.
+//  3. Hazard rate model.
+//  4. Solving for the hype derivative fixed rate.
 
 pub trait NewtonRaphson<A>
 where

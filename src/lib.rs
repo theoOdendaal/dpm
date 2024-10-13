@@ -20,7 +20,6 @@ pub mod conventions {
 
 pub mod core {
     pub mod sequence;
-    pub mod solver;
 }
 
 pub mod interest {
@@ -40,6 +39,9 @@ pub mod macros {
 
 pub mod math {
     pub mod interpolation;
+    pub mod poly;
+    pub mod solver;
+    pub mod splines;
 }
 
 pub mod resources {
