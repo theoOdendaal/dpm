@@ -1,59 +1,73 @@
-//https://www.kindsonthegenius.com/machine-learning-101-polynomial-curve-fitting/
+/*
+let path = "src/resources/curves";
+    let dir = format!("{}/zar_disc_csa.txt", path);
+    let contents = std::fs::read_to_string(dir).unwrap();
+    let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
+    let curve: CurveParameters<f64> = curve.into();
 
-pub fn predict(x: &[f64], coefficients: &[f64]) -> Vec<f64> {
-    x.iter()
-        .map(|xi| {
-            coefficients
-                .iter()
-                .enumerate()
-                .map(|(i, c)| c * xi.powi(i as i32))
-                .sum::<f64>()
-        })
-        .collect::<Vec<f64>>()
-}
+    let xp: Vec<f64> = (1..100).map(|x| x as f64 / 365.0).collect();
+    let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
 
-pub fn loss(x: &[f64], y: &[f64], coefficients: &[f64]) -> f64 {
-    let y_pred = predict(x, coefficients);
-    let square_error: f64 = y
+    let coef = solve_for_cubic_coefficients(&x, &y, 10);
+
+    let interpolated_points: Vec<f64> = xp
+        .into_iter()
+        .map(|xi| polynominal_function(&coef, &xi))
+        .collect();
+
+    println!("{:?}", interpolated_points);
+*/
+
+pub fn polynominal_function(coefficients: &[f64], x: &f64) -> f64 {
+    coefficients
         .iter()
-        .zip(y_pred.iter())
-        .map(|(a, b)| (a - b).powi(2))
-        .sum();
-    square_error / x.len() as f64
+        .enumerate()
+        .map(|(i, c)| c * x.powi(i as i32))
+        .sum::<f64>()
 }
 
-pub fn gradients(x: &[f64], y: &[f64], coefficients: &[f64]) -> Vec<f64> {
-    let y_pred = predict(x, coefficients);
-    let mut grad = vec![0.0; coefficients.len()];
+pub fn solve_for_cubic_coefficients(x: &[f64], y: &[f64], degree: usize) -> Vec<f64> {
+    assert_eq!(x.len(), y.len());
 
-    for (i, xi) in x.iter().enumerate() {
-        let error = y_pred[i] - y[i];
-        for (j, g) in grad.iter_mut().enumerate() {
-            *g += (2.0 * error * xi.powi(j as i32)).clamp(-1.0, 1.0);
-        }
-    }
-    grad.iter().map(|g| g / x.len() as f64).collect()
-}
+    let mut coefficients = vec![0.0; degree + 1];
 
-pub fn get_coefficients(x: &[f64], y: &[f64], degrees: usize, epochs: usize, lr: f64) -> Vec<f64> {
-    let mut coefficients: Vec<f64> = vec![0.0; degrees + 1];
+    let learning_rate = 1e-8;
+    let epochs = 10_000;
+    let n = x.len() as f64;
 
     for _ in 0..epochs {
-        let current_loss = loss(x, y, &coefficients);
-        if current_loss.abs() < 1e-8 {
-            return coefficients;
+        let mut gradients = vec![0.0; degree + 1];
+
+        let mut total_error = 0.0;
+
+        for (xi, yi) in x.iter().zip(y.iter()) {
+            let predict = polynominal_function(&coefficients, xi);
+            let error = yi - predict;
+            let error_derivative = -2.0 * error;
+            total_error += (yi - predict).powi(2);
+
+            let weight = 1.0;
+
+            for (i, c) in gradients.iter_mut().enumerate() {
+                *c += weight * error_derivative * xi.powi(i as i32);
+            }
         }
 
-        let formatted_coefficients: Vec<String> =
-            coefficients.iter().map(|c| format!("{:.6}", c)).collect();
-        println!("{:?} - Loss: {:.6}", formatted_coefficients, current_loss);
+        let grad_clip_threshold = 1.0;
+        for c in gradients.iter_mut() {
+            *c = c.min(grad_clip_threshold).max(-grad_clip_threshold) * learning_rate / n;
+        }
 
-        let grads = gradients(x, y, &coefficients);
+        for i in 0..coefficients.len() {
+            coefficients[i] -= gradients[i];
+        }
 
-        for (i, g) in grads.iter().enumerate() {
-            coefficients[i] -= lr * g;
+        println!("{:.6}", total_error);
+
+        if total_error.abs() < 1e-8 {
+            return coefficients.to_vec();
         }
     }
 
-    coefficients
+    coefficients.to_vec()
 }

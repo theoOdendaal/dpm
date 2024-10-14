@@ -117,8 +117,6 @@ impl TryFrom<f64> for DiscreteCompoundingFrequencies {
     }
 }
 
-//  --- Trait implementations: Blanket
-
 impl TimeValueOfMoney<f64> for Simple {
     fn fv(&self, n: &f64, r: &f64) -> f64 {
         1.0 + r * n
@@ -228,6 +226,8 @@ impl TimeValueOfMoney<f64> for InterestConventions {
         }
     }
 }
+
+//  --- Trait implementations: Blanket
 
 impl<A, B> TimeValueOfMoney<Vec<A>, A> for B
 where

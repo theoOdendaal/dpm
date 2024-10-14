@@ -49,7 +49,6 @@ fn main() {
     let curve: CurveParameters<f64> = curve.into();
 
     let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
-
     let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
 
     let mut forward_rates: Vec<f64> = discount_factors
@@ -60,6 +59,7 @@ fn main() {
         .map(|((a, b), c)| (b / a - 1.0) / c)
         .collect();
     forward_rates.insert(0, 0.0);
+
     assert_eq!(discount_factors.len(), forward_rates.len());
 
     // FIXME, this forward rate logic is messy. Clean up and make sure it will work on all instances.

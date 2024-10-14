@@ -17,11 +17,3 @@
 // 3. S'i(xi+1) = S'i+1(xi+1)
 // 4. S''i(xi+1) = S''x1+1(x1+1)
 // 5. S''0(x0) = 0 AND S''n-1(xn) = 0
-
-fn polynomial(x: &f64, coefficients: &[f64]) -> f64 {
-    coefficients
-        .iter()
-        .enumerate()
-        .map(|(i, c)| x * c.powi(i as i32))
-        .sum()
-}

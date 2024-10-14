@@ -49,5 +49,6 @@ pub mod resources {
 }
 
 pub mod time {
+    pub mod ops;
     pub mod periods;
 }

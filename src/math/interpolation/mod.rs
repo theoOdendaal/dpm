@@ -42,7 +42,6 @@ pub enum InterpolationMethod {
     Quadratic,
     Exponential,
     Akima,
-    TempCubic,
 }
 
 impl Default for InterpolationMethod {
@@ -53,11 +52,9 @@ impl Default for InterpolationMethod {
 
 //  --- Structs
 pub struct Linear;
-pub struct CubicHermite;
 pub struct LogLinear;
 pub struct Quadratic;
 pub struct Exponential;
-pub struct TempCubic;
 
 //  --- Traits
 pub trait Interpolate<A, B> {
@@ -74,12 +71,11 @@ impl Interpolate<Vec<f64>, f64> for InterpolationMethod {
             Self::NelsonSiegel => todo!(),
             Self::NelsonSiegelSvensson => todo!(),
             Self::CubicSpline => todo!(),
-            Self::CubicHermite => CubicHermite.interpolate(x, y, xp),
+            Self::CubicHermite => todo!(),
             Self::LogLinear => LogLinear.interpolate(x, y, xp),
             Self::Quadratic => Quadratic.interpolate(x, y, xp),
             Self::Exponential => Exponential.interpolate(x, y, xp),
             Self::Akima => todo!(),
-            Self::TempCubic => TempCubic.interpolate(x, y, xp),
         }
     }
 }
@@ -100,37 +96,6 @@ impl Interpolate<Vec<f64>, f64> for Linear {
         let (y1, y2) = (y[index], y[index + 1]);
 
         ((xp - x1) / (x2 - x1)) * (y2 - y1) + y1
-    }
-}
-
-// TODO is this really CubicHermite? Isn't 3 + 1 points required?
-// TODO look at this guidance: https://www.calculatorsoup.com/calculators/algebra/cubicequation.php
-impl Interpolate<Vec<f64>, f64> for CubicHermite {
-    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
-        if xp <= &0.0 {
-            if xp < &0.0 {
-                return 0.0;
-            } else {
-                return 1.0;
-            }
-        };
-
-        let index = partition_index(x, xp).max(1);
-
-        let (x1, x2, x3) = (&x[index - 1], &x[index], &x[index + 1]);
-        let (y1, y2, y3) = (&y[index - 1], &y[index], &y[index + 1]);
-
-        let t = (xp - x2) / (x3 - x2);
-        let m0 = (y2 - y1) / (x2 - x1);
-        //let m1 = (y3 - y2) / (x3 - x2);
-        let m1 = (y3 - y1) / (x3 - x1); // Smooth curve by calculating the curve, by using an average.
-
-        let h1 = (2.0 * t.powf(3.0) - 3.0 * t.powf(2.0) + 1.0) * y1;
-        let h2 = (-2.0 * t.powf(3.0) + 3.0 * t.powf(2.0)) * y2;
-        let h3 = (t.powf(3.0) - 2.0 * t.powf(2.0) + t) * m0 * (x2 - x1);
-        let h4 = (t.powf(3.0) - t.powf(2.0)) * m1 * (x2 - x1);
-
-        h1 + h2 + h3 + h4
     }
 }
 
@@ -171,7 +136,7 @@ impl Interpolate<Vec<f64>, f64> for Quadratic {
 
         let (a, b, c) = quadratic_coefficients(x_values, y_values);
 
-        a * (xp).powf(2.0) + b * (xp) + c
+        a * (xp).powi(2) + b * (xp) + c
     }
 }
 
@@ -190,21 +155,6 @@ impl Interpolate<Vec<f64>, f64> for Exponential {
         let (y1, y2) = (y[index], y[index + 1]);
 
         y2.powf((xp - x1) / (x2 - x1)) * y1.powf((x2 - xp) / (x2 - x1))
-    }
-}
-
-impl Interpolate<Vec<f64>, f64> for TempCubic {
-    fn interpolate(&self, x: &Vec<f64>, y: &Vec<f64>, xp: &f64) -> f64 {
-        if xp <= &0.0 {
-            if xp < &0.0 {
-                return 0.0;
-            } else {
-                return 1.0;
-            }
-        };
-        let (a, b, c, d) = solve_for_cubic_coefficients(x, y);
-        //println!("{}-{}-{}-{}", a, b, c, d);
-        cubic_function(&a, &b, &c, &d, xp)
     }
 }
 
@@ -244,9 +194,9 @@ fn quadratic_coefficients(x: QuadraticPoints, y: QuadraticPoints) -> (f64, f64, 
     let a3 = x.0 * (y.2 - y.1);
     let a = (a1 + a2 + a3) / denominator;
 
-    let b1 = x.2.powf(2.0) * (y.0 - y.1);
-    let b2 = x.1.powf(2.0) * (y.2 - y.0);
-    let b3 = x.0.powf(2.0) * (y.1 - y.2);
+    let b1 = x.2.powi(2) * (y.0 - y.1);
+    let b2 = x.1.powi(2) * (y.2 - y.0);
+    let b3 = x.0.powi(2) * (y.1 - y.2);
     let b = (b1 + b2 + b3) / denominator;
 
     let c1 = y.0 * x.1 * x.2 / ((x.0 - x.1) * (x.0 - x.2));
@@ -257,84 +207,19 @@ fn quadratic_coefficients(x: QuadraticPoints, y: QuadraticPoints) -> (f64, f64, 
     (a, b, c)
 }
 
+/*
 fn cubic_coefficients(x: CubicPoints, y: CubicPoints) -> (f64, f64, f64, f64) {
     todo!()
 }
 
 fn quadratic_function(a: &f64, b: &f64, c: &f64, x: &f64) -> f64 {
-    a * x.powf(2.0) + b * x + c
+    a * x.powi(2.0) + b * x + c
 }
 
-pub fn cubic_function(a: &f64, b: &f64, c: &f64, d: &f64, x: &f64) -> f64 {
+fn cubic_function(a: &f64, b: &f64, c: &f64, d: &f64, x: &f64) -> f64 {
     a * x.powi(3) + b * x.powi(2) + c * x + d
 }
-
-fn polynominal_function(coefficients: &[f64], x: &f64) -> f64 {
-    coefficients
-        .iter()
-        .enumerate()
-        .map(|(i, c)| c * x.powi(i as i32))
-        .sum::<f64>()
-}
-
-// TODO Update to allow coefficients to be passed as an array. This will allow flexibility in terms of the polynomial degrees.
-pub fn solve_for_cubic_coefficients(x: &[f64], y: &[f64]) -> (f64, f64, f64, f64) {
-    assert_eq!(x.len(), y.len());
-
-    let (mut a, mut b, mut c, mut d) = (0.0, 0.0, 0.0, 0.0);
-    //let coefficients = [0.0; 4];
-
-    let learning_rate = 1e-4;
-    let epochs = 10_000_000;
-    let n = x.len() as f64;
-
-    for _ in 0..epochs {
-        let mut grad_a = 0.0;
-        let mut grad_b = 0.0;
-        let mut grad_c = 0.0;
-        let mut grad_d = 0.0;
-        //let mut gradients = [0.0; 4];
-
-        let mut total_error = 0.0;
-
-        for (xi, yi) in x.iter().zip(y.iter()) {
-            let predict = cubic_function(&a, &b, &c, &d, xi);
-            let error = yi - predict;
-            let error_derivative = -2.0 * error;
-            total_error += (yi - predict).powi(2);
-
-            let weight = 1.0; // / (1.0 + xi.abs());
-            grad_a += weight * error_derivative * xi.powi(3);
-            grad_b += weight * error_derivative * xi.powi(2);
-            grad_c += weight * error_derivative * xi;
-            grad_d += weight * error_derivative;
-
-            //for (i, c) in gradients.iter_mut().enumerate() {
-            //    *c += weight * error_derivative.powi(i as i32);
-            //}
-        }
-        let grad_clip_threshold = 1e-1;
-        grad_a = grad_a.min(grad_clip_threshold).max(-grad_clip_threshold);
-        grad_b = grad_b.min(grad_clip_threshold).max(-grad_clip_threshold);
-        grad_c = grad_c.min(grad_clip_threshold).max(-grad_clip_threshold);
-        grad_d = grad_d.min(grad_clip_threshold).max(-grad_clip_threshold);
-
-        a -= learning_rate * grad_a / n;
-        b -= learning_rate * grad_b / n;
-        c -= learning_rate * grad_c / n;
-        d -= learning_rate * grad_d / n;
-
-        println!(
-            "Coefficients: a = {:.6}, b = {:.6}, c = {:.6}, d = {:.6}, error = {:.6}",
-            a, b, c, d, total_error
-        );
-        if total_error.abs() < 1e-8 {
-            return (a, b, c, d);
-        }
-    }
-
-    (a, b, c, d)
-}
+*/
 
 //  --- Unit tests
 #[cfg(test)]
