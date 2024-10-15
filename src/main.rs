@@ -10,13 +10,14 @@
 // All functions should take Vec<f64> as self.
 
 use chrono::{Months, NaiveDate};
-use dpm::{core::sequence::Sequence, time::ops::EndOfMonth};
+use dpm::core::sequence::Sequence;
 
 fn main() {
     let lower = NaiveDate::from_ymd_opt(2023, 12, 31).unwrap();
     let upper = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
     let step = Months::new(2);
-    let seq = NaiveDate::seq(lower, upper, step).eom();
+
+    let seq = Sequence::from_step(lower, upper, step);
 
     println!("{:?}", seq);
 }
