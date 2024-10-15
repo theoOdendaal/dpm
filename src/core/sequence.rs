@@ -1,23 +1,22 @@
 //! Sequence creation.
 
-//  --- Structs
+//  --- Traits
 
-#[derive(Debug, Default)]
-pub struct Sequence<A> {
-    elements: Vec<A>,
+/// Bound inclusive sequence.
+pub trait Sequence<A, B, C> {
+    fn seq(lower: A, upper: A, step: B) -> C;
 }
 
 //  --- Trait implementations: Blanket
 
-impl<A> Sequence<A> {
-    pub fn from_step<B>(lower: A, upper: A, step: B) -> Self
-    where
-        A: Copy
-            + std::cmp::PartialOrd
-            + std::ops::Sub<B, Output = A>
-            + std::ops::Add<B, Output = A>,
-        B: Copy,
-    {
+impl<A, B> Sequence<A, B, Vec<A>> for A
+where
+    A: Copy + std::cmp::PartialOrd + std::ops::Sub<B, Output = A> + std::ops::Add<B, Output = A>,
+    B: Copy,
+{
+    fn seq(lower: A, upper: A, step: B) -> Vec<A> {
+        //assert_eq!(lower + step, lower);
+
         let min_value = if lower < upper { lower } else { upper };
         let mut max_value = if upper > lower { upper } else { lower };
 
@@ -38,44 +37,9 @@ impl<A> Sequence<A> {
         sequence.push(min_value);
         sequence.reverse();
         sequence.shrink_to_fit();
-        Self { elements: sequence }
+        sequence
     }
 }
-
-//  --- Trait implementations: Standard library
-
-impl<A> From<Sequence<A>> for Vec<A>
-where
-    A: Copy,
-{
-    fn from(value: Sequence<A>) -> Self {
-        value.elements.to_vec()
-    }
-}
-
-impl<A> From<Vec<A>> for Sequence<A> {
-    fn from(value: Vec<A>) -> Self {
-        Self { elements: value }
-    }
-}
-
-impl<A> IntoIterator for Sequence<A> {
-    type Item = A;
-    type IntoIter = std::vec::IntoIter<A>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.elements.into_iter()
-    }
-}
-
-impl<A> std::ops::Index<usize> for Sequence<A> {
-    type Output = A;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.elements[index]
-    }
-}
-
 //  --- Unit tests
 
 #[cfg(test)]
@@ -89,7 +53,7 @@ mod test_frequency {
         let upper = 11;
         let step = 3;
 
-        let sequence: Vec<i32> = Sequence::from_step(upper, lower, step).into();
+        let sequence = i32::seq(upper, lower, step);
         let expected = vec![1, 2, 5, 8, 11];
         assert_eq!(sequence, expected)
     }
@@ -100,7 +64,7 @@ mod test_frequency {
         let upper: u32 = 11;
         let step: u32 = 3;
 
-        let sequence: Vec<u32> = Sequence::from_step(upper, lower, step).into();
+        let sequence = u32::seq(upper, lower, step);
         let expected = vec![1, 2, 5, 8, 11];
         assert_eq!(sequence, expected)
     }
@@ -111,7 +75,7 @@ mod test_frequency {
         let upper = 11.0;
         let step = 3.0;
 
-        let sequence: Vec<f64> = Sequence::from_step(upper, lower, step).into();
+        let sequence = f64::seq(upper, lower, step);
         let expected = vec![1.0, 2.0, 5.0, 8.0, 11.0];
         assert_eq!(sequence, expected)
     }

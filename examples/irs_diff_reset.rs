@@ -67,11 +67,11 @@ fn main() {
         ];
 
         // Ops
-        let seq_reset = Sequence::from_step(inception_date, termination_date, reset_tenor);
-        let seq_payment = Sequence::from_step(inception_date, termination_date, payment_tenor);
+        let seq_reset = NaiveDate::seq(inception_date, termination_date, reset_tenor);
+        let seq_payment = NaiveDate::seq(inception_date, termination_date, payment_tenor);
 
-        let seq_reset: Vec<NaiveDate> = bdc.business_day(&seq_reset.into(), &public_holidays);
-        let seq_payment: Vec<NaiveDate> = bdc.business_day(&seq_payment.into(), &public_holidays);
+        let seq_reset: Vec<NaiveDate> = bdc.business_day(&seq_reset, &public_holidays);
+        let seq_payment: Vec<NaiveDate> = bdc.business_day(&seq_payment, &public_holidays);
 
         let discount_fractions = dcc.year_fraction(&valuation_date, &seq_payment[1..].to_vec());
 

@@ -36,10 +36,10 @@ fn main() {
     let country_code: String = CountryTwoCode::from_str(country).unwrap().into();
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
 
-    let seq_res = Sequence::from_step(start, end, step);
+    let seq_res = NaiveDate::seq(start, end, step);
 
     // TODO Inception and termination date should not be adjusted.
-    let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res.into(), &public_holidays);
+    let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res, &public_holidays);
 
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_res[1..].to_vec());
     let interest_fractions = dcc.year_fraction(&seq_res, &seq_res[1..].to_vec());

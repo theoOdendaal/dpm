@@ -17,7 +17,7 @@ fn main() {
     let upper = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
     let step = Months::new(2);
 
-    let seq = Sequence::from_step(lower, upper, step);
+    let seq = NaiveDate::seq(lower, upper, step);
 
     println!("{:?}", seq);
 }

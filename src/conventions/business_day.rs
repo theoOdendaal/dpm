@@ -53,6 +53,7 @@ pub trait BusinessDayOperations: Sized {
 }
 
 //  --- Trait implementations: Concrete
+
 impl BusinessDayOperations for NaiveDate {
     fn is_holiday(&self, public_holidays: &[Self]) -> bool {
         public_holidays.contains(self)
@@ -151,7 +152,8 @@ where
 }
 
 //  --- Trait implementations: Blanket
-impl<A, B> BusinessDay<Vec<A>, Vec<A>> for B
+
+impl<A, B> BusinessDay<Vec<A>> for B
 where
     A: BusinessDayOperations + Copy,
     B: BusinessDay<A, Vec<A>>,
