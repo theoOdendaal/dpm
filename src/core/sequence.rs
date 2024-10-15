@@ -15,8 +15,6 @@ where
     B: Copy,
 {
     fn seq(lower: A, upper: A, step: B) -> Vec<A> {
-        //assert_eq!(lower + step, lower);
-
         let min_value = if lower < upper { lower } else { upper };
         let mut max_value = if upper > lower { upper } else { lower };
 
