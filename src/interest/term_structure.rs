@@ -49,7 +49,7 @@ impl From<chrono::format::ParseError> for Error {
 pub struct CurveParameters<C, A, B = A> {
     x: Vec<A>,
     y: Vec<B>,
-    convention: C, // TODO incorporate C into all impl's below. Type should be generic, and explicitly impl'ed in the interst::types.rs module.
+    convention: Option<C>, // TODO incorporate C into all impl's below. Type should be generic, and explicitly impl'ed in the interst::types.rs module.
 }
 
 //  --- Traits
