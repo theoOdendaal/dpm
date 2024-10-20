@@ -101,8 +101,8 @@ where
 {
     let x_short = curve.get_x();
     let y_short = curve.get_y();
-
-    // Refactor this once iterator is implemented for term_structure trait.
+    // TODO rather than setting nan to zero, filter for all values that is non NaN ?
+    // TODO  Refactor this once iterator is implemented for term_structure trait.
     x_short
         .iter()
         .zip(y_short.iter())
