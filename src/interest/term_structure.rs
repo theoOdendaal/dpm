@@ -46,10 +46,9 @@ impl From<chrono::format::ParseError> for Error {
 //  --- Structs
 
 #[derive(Debug)]
-pub struct CurveParameters<C, A, B = A> {
+pub struct CurveParameters<A, B = A> {
     x: Vec<A>,
     y: Vec<B>,
-    convention: Option<C>, // TODO incorporate C into all impl's below. Type should be generic, and explicitly impl'ed in the interst::types.rs module.
 }
 
 //  --- Traits
@@ -61,8 +60,6 @@ pub trait TermStructure<A, B = A> {
 
     /// Return 'value' field of Curve.
     fn get_y(&self) -> Vec<B>;
-
-    fn set_z(&mut self) -> Self;
 
     /// Returns a tuple containing the 'key' and 'value' field.
     fn unpack(&self) -> (Vec<A>, Vec<B>) {
