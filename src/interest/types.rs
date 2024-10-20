@@ -10,10 +10,12 @@
 //! Formulae
 //! DISCOUNT VS SWAP : (S/m).Df1 + (S/m).Df2 ... + (1+ S/m)^(nx.m).Dfx = 1 (where S = Swap rate, and Df = Discount factors)
 //! DISCOUNT VS SPOT: (1 + S/m)^nm.Df = 1 (where S = Spot rate, and Df = Discount factor)
-//! DISCOUNT VS FORWARD: ...
-//! SWAP VS SPOT: DISCOUNT VS SWAP but Df is replaced with (1+r/m)^nm
-//! FORWARD VS SPOT: (1+r1/m)^(xm) * (1+F)^(ym) = (1+r2/m)^((x+y)*m)
+//! DISCOUNT VS FORWARD: (1+r1/m)^(-x.m) * (1+F)^(-y.m) = (1+r2/m)^(-(x+y)*m)
+//! SWAP VS SPOT: (S/m).(1 + rx)^-nx.m + (S/m).(1 + rx)^-nx.m ... + (1+ S/m)^(nx.m).(1 + rx)^-nx.m = 1 (where S = Swap rate, and r = Spot rates)
+//! FORWARD VS SPOT: (1+r1/m)^(x.m) * (1+F)^(y.m) = (1+r2/m)^((x+y)*m)
 //! FORWARD VS SWAP: ...
+
+// Defines additional functionality to be used in conjunction with the TermStructure trait, contained in interest::term_structure.rs.
 
 // SWAP INTO ANYTHING IS DIFFICULT.
 // DISCOUNT INTO ANYTHING IS EASIER.
@@ -55,6 +57,7 @@
 
 // The purpose of module is not to convert individual rates, but rather a curve.
 use super::ops::{InterestConventions, TimeValueOfMoney};
+use super::term_structure::TermStructure;
 
 //  --- Types
 type Point = (f64, f64);
@@ -70,11 +73,51 @@ pub enum RateTypes {
     Par(InterestConventions),
 }
 
+// Swap rates are typically not quoted as annualized rates, and should therefore only be apportioned for m.
+
+impl RateTypes {
+    fn convert<A>(&self, x: &A, y: &A) -> A {
+        match self {
+            Self::Swap(conv) => todo!(),
+            Self::Discount => todo!(),
+            Self::Spot(conv) => todo!(),
+            Self::Forward(conv) => todo!(),
+            Self::Par(conv) => todo!(),
+        }
+    }
+}
+
 struct Swap(InterestConventions);
 struct Discount;
 struct Spot(InterestConventions);
 struct Forward(InterestConventions);
 struct Par(InterestConventions);
+
+// Random functions.
+
+pub fn discount_to_forward_vec<A>(convention: &InterestConventions, curve: &A) -> Vec<f64>
+where
+    A: TermStructure<f64>,
+{
+    let x_short = curve.get_x();
+    let y_short = curve.get_y();
+
+    // Refactor this once iterator is implemented for term_structure trait.
+    x_short
+        .iter()
+        .zip(y_short.iter())
+        .zip(x_short.iter().skip(1))
+        .zip(y_short.iter().skip(1))
+        .map(|(((x_s, y_s), x_l), y_l)| {
+            let value = convention.rate(&(*x_l - *x_s), &(*y_l / *y_s));
+            if value.is_nan() {
+                0.0
+            } else {
+                value
+            }
+        })
+        .collect()
+}
 
 //  --- Swap rate conversions ---
 // fn swap_to_discount

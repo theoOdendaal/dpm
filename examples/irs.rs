@@ -8,6 +8,7 @@ use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{CurveParameters, TermStructure};
+use dpm::interest::types::discount_to_forward_vec;
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
@@ -60,7 +61,14 @@ fn main() {
     // Discount factors.
     let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
 
+    // TODO Convert into a CurveParameter, to allow easier conversion.
+    let discount_factors_term = CurveParameters::new(&discount_fractions, &discount_factors);
+    let mut forward_rates =
+        discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
+    forward_rates.insert(0, 0.0);
+
     // Interest rates.
+    /*
     let mut forward_rates: Vec<f64> = discount_factors
         .iter()
         .skip(1)
@@ -69,6 +77,7 @@ fn main() {
         .map(|((a, b), c)| (b / a - 1.0) / c)
         .collect();
     forward_rates.insert(0, 0.0);
+    */
 
     assert_eq!(discount_factors.len(), forward_rates.len());
 
@@ -119,6 +128,7 @@ fn main() {
     let pv2_sum = present_values2.iter().sum::<f64>();
     let net_pv = pv1_sum - pv2_sum;
 
+    /*
     const TERMINAL_WIDTH: usize = 200;
 
     // Print formatting.
@@ -135,6 +145,7 @@ fn main() {
         "Leg2 PV",
     ];
 
+
     table_print!(
         TERMINAL_WIDTH,
         headings,
@@ -149,6 +160,7 @@ fn main() {
         present_values1,
         present_values2
     );
+    */
 
     println!("{}", "-".repeat(49));
     println!("My value:\t\t\t | {:.3}\t|", &net_pv);

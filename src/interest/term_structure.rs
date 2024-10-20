@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 // TODO try and remove all references to clone and copy.
 // TODO create more Error variants.
 // TODO impl From<> for Error for more instances.
+// TODO implement IntoIterator and Iterator for any type that implements the TermStructure trait. Iterator should return a tuple (x, y).
 
 //  --- Errors
 
@@ -45,9 +46,10 @@ impl From<chrono::format::ParseError> for Error {
 //  --- Structs
 
 #[derive(Debug)]
-pub struct CurveParameters<A, B = A> {
+pub struct CurveParameters<C, A, B = A> {
     x: Vec<A>,
     y: Vec<B>,
+    convention: C, // TODO incorporate C into all impl's below. Type should be generic, and explicitly impl'ed in the interst::types.rs module.
 }
 
 //  --- Traits
@@ -59,6 +61,8 @@ pub trait TermStructure<A, B = A> {
 
     /// Return 'value' field of Curve.
     fn get_y(&self) -> Vec<B>;
+
+    fn set_z(&mut self) -> Self;
 
     /// Returns a tuple containing the 'key' and 'value' field.
     fn unpack(&self) -> (Vec<A>, Vec<B>) {
@@ -166,6 +170,8 @@ where
     B: Clone,
 {
     pub fn new(x: &[A], y: &[B]) -> Self {
+        assert_eq!(x.len(), y.len()); // TODO Add more robust error handling.
+
         Self {
             x: x.to_vec(),
             y: y.to_vec(),
