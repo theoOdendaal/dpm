@@ -18,7 +18,9 @@ use std::collections::BTreeMap;
 // TODO try and remove all references to clone and copy.
 // TODO create more Error variants.
 // TODO impl From<> for Error for more instances.
-// TODO implement IntoIterator and Iterator for any type that implements the TermStructure trait. Iterator should return a tuple (x, y).
+
+// TODO should the CurveParameters not be a struct with concrete implementations?
+// Make the From<BTreeMap> conversion generic.
 
 //  --- Errors
 
@@ -147,6 +149,7 @@ pub trait TermStructure<A, B = A> {
 
 //  --- Trait implementations: Concrete
 
+/*
 impl<A, B> From<BTreeMap<A, B>> for CurveParameters<f64>
 where
     A: Copy + Into<f64>,
@@ -160,6 +163,21 @@ where
         Self { x, y }
     }
 }
+
+impl<A, B> From<BTreeMap<A, B>> for CurveParameters<String, f64>
+where
+    A: Clone + Copy + Into<String>,
+    B: Clone + Copy + Into<f64>,
+{
+    fn from(value: BTreeMap<A, B>) -> Self {
+        let mut x: Vec<String> = value.keys().copied().map(Into::into).collect();
+        let mut y: Vec<f64> = value.values().copied().map(Into::into).collect();
+        x.shrink_to_fit();
+        y.shrink_to_fit();
+        Self { x, y }
+    }
+}
+*/
 
 impl<A, B> CurveParameters<A, B>
 where
@@ -187,5 +205,20 @@ where
 
     fn get_y(&self) -> Vec<B> {
         self.y.to_vec()
+    }
+}
+
+//  --- Trait implementations: Blanket
+impl<A, B> From<BTreeMap<A, B>> for CurveParameters<A, B>
+where
+    A: Clone + Copy,
+    B: Clone + Copy,
+{
+    fn from(value: BTreeMap<A, B>) -> Self {
+        let mut x: Vec<A> = value.keys().copied().collect();
+        let mut y: Vec<B> = value.values().copied().collect();
+        x.shrink_to_fit();
+        y.shrink_to_fit();
+        Self { x, y }
     }
 }

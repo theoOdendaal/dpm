@@ -55,15 +55,19 @@
 // ^ Therefore, when calculating the discount factor using swap rates, you should consider previous discount factors,
 // while calculating the discount factor using the spot rates, you only use a single rate.
 
+// Swap rates are typically not quoted as annualized rates, and should therefore only be apportioned for m.
+
 // The purpose of module is not to convert individual rates, but rather a curve.
 use super::ops::{InterestConventions, TimeValueOfMoney};
 use super::term_structure::TermStructure;
+
+//  --- Errors
 
 //  --- Types
 type Point = (f64, f64);
 type Points<'a> = (&'a [f64], &'a [f64]);
 
-// TODO create unit tests.
+//  --- Enums
 
 pub enum RateTypes {
     Swap(InterestConventions),
@@ -73,27 +77,19 @@ pub enum RateTypes {
     Par(InterestConventions),
 }
 
-// Swap rates are typically not quoted as annualized rates, and should therefore only be apportioned for m.
+//  --- Structs
 
-impl RateTypes {
-    fn convert<A>(&self, x: &A, y: &A) -> A {
-        match self {
-            Self::Swap(conv) => todo!(),
-            Self::Discount => todo!(),
-            Self::Spot(conv) => todo!(),
-            Self::Forward(conv) => todo!(),
-            Self::Par(conv) => todo!(),
-        }
-    }
-}
+#[derive(Clone)]
+struct SwapRate<A>(InterestConventions, A);
+#[derive(Clone)]
+struct DiscountRate<A>(A);
+#[derive(Clone)]
+struct SpotRate<A>(InterestConventions, A);
+#[derive(Clone)]
+struct ForwardRate<A>(InterestConventions, A);
+//struct Par<A>(InterestConventions, A);
 
-struct Swap(InterestConventions);
-struct Discount;
-struct Spot(InterestConventions);
-struct Forward(InterestConventions);
-struct Par(InterestConventions);
-
-// Random functions.
+//  --- Standalone functions
 
 pub fn discount_to_forward_vec<A>(convention: &InterestConventions, curve: &A) -> Vec<f64>
 where
@@ -101,9 +97,11 @@ where
 {
     let x_short = curve.get_x();
     let y_short = curve.get_y();
+
     // TODO rather than setting nan to zero, filter for all values that is non NaN ?
     // TODO  Refactor this once iterator is implemented for term_structure trait.
     // TODO, determine when this function would return NaN?
+    /*
     x_short
         .iter()
         .zip(y_short.iter())
@@ -117,6 +115,15 @@ where
                 value
             }
         })
+        .collect()
+    */
+    x_short
+        .iter()
+        .zip(y_short.iter())
+        .zip(x_short.iter().skip(1))
+        .zip(y_short.iter().skip(1))
+        .map(|(((x_s, y_s), x_l), y_l)| convention.rate(&(*x_l - *x_s), &(*y_l / *y_s)))
+        .filter(|a| !a.is_nan())
         .collect()
 }
 

@@ -26,6 +26,7 @@ pub enum Error {
 //  --- Enums
 
 /// Interest calculation conventions.
+#[derive(Clone)]
 pub enum InterestConventions {
     /// Simple interest calculation convention.
     Simple,
