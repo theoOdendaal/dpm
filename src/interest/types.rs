@@ -95,19 +95,10 @@ pub fn discount_to_forward_vec(
     convention: &InterestConventions,
     curve: &TermStructure<f64>,
 ) -> Vec<f64> {
-    let x_short: Vec<f64> = curve.get_x();
-    let y_short: Vec<f64> = curve.get_y();
-
-    // TODO rather than setting nan to zero, filter for all values that is non NaN ?
-    // TODO  Refactor this once iterator is implemented for term_structure trait.
-    // TODO, determine when this function would return NaN?
-
-    x_short
-        .iter()
-        .zip(y_short.iter())
-        .zip(x_short.iter().skip(1))
-        .zip(y_short.iter().skip(1))
-        .map(|(((x_s, y_s), x_l), y_l)| convention.rate(&(*x_l - *x_s), &(*y_l / *y_s)))
+    curve
+        .clone()
+        .zip(curve.clone().skip(1))
+        .map(|((x_s, y_s), (x_l, y_l))| convention.rate(&(x_l - x_s), &(y_l / y_s)))
         .filter(|a| !a.is_nan())
         .collect()
 }
