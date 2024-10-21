@@ -7,7 +7,7 @@ use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
-use dpm::interest::term_structure::{CurveParameters, TermStructure};
+use dpm::interest::term_structure::TermStructure;
 use dpm::interest::types::discount_to_forward_vec;
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
@@ -42,14 +42,12 @@ fn main() {
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
 
     // Load spot rates
-    /*
+
     let path = "src/resources/curves";
     let dir = format!("{}/jibar.txt", path);
     let contents = std::fs::read_to_string(dir).unwrap();
-    let spot_rates: BTreeMap<&str, f64> = serde_json::from_str(&contents).unwrap();
-    let spot_rates: CurveParameters<String, f64> = spot_rates.into();
-    let (spot_x, spot_y) = spot_rates.unpack();
-    */
+    let spot_rates: BTreeMap<NaiveDate, f64> = serde_json::from_str(&contents).unwrap();
+    let spot_rates: TermStructure<NaiveDate, f64> = spot_rates.into();
 
     // Date sequence.
     let seq_res = NaiveDate::seq(start, end, step);
@@ -65,29 +63,27 @@ fn main() {
     let dir = format!("{}/zar_disc_csa.txt", path);
     let contents = std::fs::read_to_string(dir).unwrap();
     let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
-    let curve: CurveParameters<f64> = curve.into();
-    let (x, y) = curve.unpack_with_map_x(|a| a / 365.0);
+    let mut curve: TermStructure<f64> = curve.into();
+    curve.map_x(|a| a / 365.0);
+    let (x, y) = curve.unpack();
 
     // Discount factors.
     let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
 
     // Interest rates.
-    // TODO Convert into a CurveParameter, to allow easier conversion.
-    let discount_factors_term = CurveParameters::new(&discount_fractions, &discount_factors);
+    let discount_factors_term = TermStructure::new(&discount_fractions, &discount_factors);
     let forward_rates = discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
-    let forward_rates = forward_rates[1..].to_vec();
-
-    let mut padded_forward_rates = vec![0.0; discount_factors.len() - forward_rates.len() - 1];
-    padded_forward_rates.push(spot);
-    padded_forward_rates.extend(forward_rates);
+    let mut forward_rate_term = TermStructure::new_with_left_pad(&seq_res[1..], &forward_rates);
+    forward_rate_term.update_with(spot_rates);
+    let forward_rates = forward_rate_term.get_y();
 
     // Add spread
-    let forward_rates1: Vec<f64> = padded_forward_rates
+    let forward_rates1: Vec<f64> = forward_rates
         .iter()
         .map(|a| if a != &0.0 { a + spread1 } else { *a })
         .collect();
 
-    let forward_rates2: Vec<f64> = padded_forward_rates
+    let forward_rates2: Vec<f64> = forward_rates
         .iter()
         .map(|a| if a != &0.0 { a + spread2 } else { *a })
         .collect();

@@ -91,32 +91,17 @@ struct ForwardRate<A>(InterestConventions, A);
 
 //  --- Standalone functions
 
-pub fn discount_to_forward_vec<A>(convention: &InterestConventions, curve: &A) -> Vec<f64>
-where
-    A: TermStructure<f64>,
-{
-    let x_short = curve.get_x();
-    let y_short = curve.get_y();
+pub fn discount_to_forward_vec(
+    convention: &InterestConventions,
+    curve: &TermStructure<f64>,
+) -> Vec<f64> {
+    let x_short: Vec<f64> = curve.get_x();
+    let y_short: Vec<f64> = curve.get_y();
 
     // TODO rather than setting nan to zero, filter for all values that is non NaN ?
     // TODO  Refactor this once iterator is implemented for term_structure trait.
     // TODO, determine when this function would return NaN?
-    /*
-    x_short
-        .iter()
-        .zip(y_short.iter())
-        .zip(x_short.iter().skip(1))
-        .zip(y_short.iter().skip(1))
-        .map(|(((x_s, y_s), x_l), y_l)| {
-            let value = convention.rate(&(*x_l - *x_s), &(*y_l / *y_s));
-            if value.is_nan() {
-                0.0
-            } else {
-                value
-            }
-        })
-        .collect()
-    */
+
     x_short
         .iter()
         .zip(y_short.iter())
