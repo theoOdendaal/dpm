@@ -25,7 +25,6 @@ fn main() {
     let end = NaiveDate::from_ymd_opt(2039, 9, 23).unwrap();
     let valuation_date = NaiveDate::from_ymd_opt(2022, 12, 31).unwrap();
     let step = Months::new(3);
-    let spot = 0.07258;
     let nominal = 400_000_000.0;
     let spread1 = 0.0006;
     let spread2 = 0.0;
@@ -51,7 +50,7 @@ fn main() {
 
     // Date sequence.
     let seq_res = NaiveDate::seq(start, end, step);
-    // TODO Inception and termination date should not be adjusted.
+    // FIXME Inception and termination date should not be adjusted.
     let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res, &public_holidays);
 
     // Discount and interest fractions.
@@ -73,20 +72,10 @@ fn main() {
     // Interest rates.
     let discount_factors_term = TermStructure::new(&discount_fractions, &discount_factors);
     let forward_rates = discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
-    let mut forward_rate_term = TermStructure::new_with_left_pad(&seq_res[1..], &forward_rates);
+    let mut forward_rate_term = TermStructure::new_with_default_pad(&seq_res[1..], &forward_rates);
     forward_rate_term.update_with(spot_rates);
-    let forward_rates = forward_rate_term.get_y();
-
-    // Add spread
-    let forward_rates1: Vec<f64> = forward_rates
-        .iter()
-        .map(|a| if a != &0.0 { a + spread1 } else { *a })
-        .collect();
-
-    let forward_rates2: Vec<f64> = forward_rates
-        .iter()
-        .map(|a| if a != &0.0 { a + spread2 } else { *a })
-        .collect();
+    let forward_rates1 = forward_rate_term.clone().shift(spread1).get_y();
+    let forward_rates2 = forward_rate_term.clone().shift(spread2).get_y();
 
     assert_eq!(discount_factors.len(), forward_rates1.len());
     assert_eq!(discount_factors.len(), forward_rates2.len());

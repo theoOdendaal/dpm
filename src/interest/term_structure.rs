@@ -16,16 +16,11 @@ use std::collections::BTreeMap;
 */
 
 // TODO, refactor this module.
-
 // TODO try and remove all references to clone and copy.
-// TODO create more Error variants.
-// TODO impl From<> for Error for more instances.
-
-// TODO should the CurveParameters not be a struct with concrete implementations?
-// Make the From<BTreeMap> conversion generic.
 
 //  --- Errors
 
+#[derive(Clone)]
 pub struct TermStructure<A, B = A> {
     index: usize,
     x: Vec<A>,
@@ -34,17 +29,17 @@ pub struct TermStructure<A, B = A> {
 
 impl<A, B, C, D> From<BTreeMap<A, B>> for TermStructure<C, D>
 where
-    A: Clone + Into<C>,
-    B: Clone + Into<D>,
+    A: Copy + Into<C>,
+    B: Copy + Into<D>,
 {
     fn from(value: BTreeMap<A, B>) -> Self {
-        let x = value.keys().cloned().map(Into::into).collect();
-        let y = value.values().cloned().map(Into::into).collect();
+        let x = value.keys().copied().map(Into::into).collect();
+        let y = value.values().copied().map(Into::into).collect();
         Self { index: 0, x, y }
     }
 }
 
-impl<A: PartialEq, B: Clone> TermStructure<A, B> {
+impl<A: PartialEq, B: Copy> TermStructure<A, B> {
     pub fn update_with(&mut self, other: Self) {
         for (i, x_val_self) in self.x.iter().enumerate() {
             if let Some(pos) = other
@@ -52,8 +47,7 @@ impl<A: PartialEq, B: Clone> TermStructure<A, B> {
                 .iter()
                 .position(|x_val_other| x_val_self == x_val_other)
             {
-                // If x is found in other, update y in self with the corresponding y from other
-                self.y[i] = other.y[pos].clone();
+                self.y[i] = other.y[pos];
             }
         }
     }
@@ -61,8 +55,8 @@ impl<A: PartialEq, B: Clone> TermStructure<A, B> {
 
 impl<A, B> TermStructure<A, B>
 where
-    A: Clone + Default,
-    B: Clone + Default,
+    A: Copy + Default,
+    B: Copy + Default + PartialEq,
 {
     pub fn new(x: &[A], y: &[B]) -> Self {
         Self {
@@ -90,7 +84,8 @@ where
         TermStructure { index: 0, x, y }
     }
 
-    pub fn new_with_left_pad(x: &[A], y: &[B]) -> Self {
+    /// Construct new instance of self, padding the smaller array with defaults.
+    pub fn new_with_default_pad(x: &[A], y: &[B]) -> Self {
         let x_len = x.len();
         let y_len = y.len();
         let mut x_padded = vec![A::default(); x_len.max(y_len) - x_len];
@@ -137,18 +132,27 @@ where
         self.y = self.get_y().iter().map(closure).collect::<Vec<B>>();
         self
     }
+
+    /// Shift each non-default value with a given size.
+    pub fn shift<S>(&mut self, size: S) -> &mut Self
+    where
+        B: std::ops::Add<S, Output = B>,
+        S: Copy,
+    {
+        self.map_y(|a| if a != &B::default() { *a + size } else { *a })
+    }
 }
 
 impl<A, B> Iterator for TermStructure<A, B>
 where
-    A: Clone,
-    B: Clone,
+    A: Copy,
+    B: Copy,
 {
     type Item = (A, B);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.x.len() && self.index < self.y.len() {
-            let item = (self.x[self.index].clone(), self.y[self.index].clone());
+            let item = (self.x[self.index], self.y[self.index]);
             self.index += 1;
             Some(item)
         } else {
