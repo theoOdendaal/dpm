@@ -14,8 +14,8 @@ use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
 
 use dpm::resources::market_data::{load_curve, load_spot};
-use dpm::table_print;
 use dpm::time::periods::IntervalPeriod;
+use dpm::{box_print, table_print};
 
 const CLIENT_VALUE: f64 = 2_101_754.992_13;
 
@@ -108,15 +108,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         present_values2
     );
 
-    println!("{}", "-".repeat(49));
-    println!("My value:\t\t\t | {:.3}\t|", &net_pv);
-    println!("Client value:\t\t\t | {:.3}\t|", &CLIENT_VALUE);
-    println!("Absolute difference:\t\t | {:.4}\t|", net_pv - CLIENT_VALUE);
-    println!(
-        "Relative difference(%):\t\t | {:.4} %\t|",
+    box_print!(
+        TERMINAL_WIDTH,
+        net_pv,
+        CLIENT_VALUE,
+        net_pv - CLIENT_VALUE,
         (net_pv - CLIENT_VALUE) / net_pv * 100.0
     );
-    println!("{}", "-".repeat(49));
 
     Ok(())
 }

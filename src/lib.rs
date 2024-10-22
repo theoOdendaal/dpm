@@ -34,6 +34,7 @@ pub mod iso {
 
 pub mod macros {
     pub mod approx;
+    pub mod bprint;
     pub mod tprint;
 }
 

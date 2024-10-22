@@ -10,6 +10,7 @@ macro_rules! table_print {
         $(
             headings.push(stringify!($data));
         )+
+
         output_size.push(headings.iter().map(|x| x.len()).collect());
 
         output.push(headings.iter().map(|x| x.to_string()).collect::<Vec<String>>());
@@ -56,7 +57,7 @@ macro_rules! table_print {
                 output_string.push_str(&" ".repeat(((padding[ib] - b.len()) as isize).max(0) as usize));
             }
 
-            println!("\n{}", output_string);
+            println!("\n{}\n", output_string);
 
         }
     }};
