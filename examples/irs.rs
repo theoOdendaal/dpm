@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use chrono::{Months, NaiveDate};
+use chrono::NaiveDate;
 
 use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::{DayCount, DayCountConventions};
@@ -13,18 +13,20 @@ use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
 
+use dpm::resources::market_data::{load_curve, load_spot};
 use dpm::table_print;
+use dpm::time::periods::IntervalPeriod;
 
 const CLIENT_VALUE: f64 = 2_101_754.992_13;
 
 // FIXME this example has cash flows for the periods before the valuation date.
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Contractual terms.
     let start = NaiveDate::from_ymd_opt(2009, 10, 15).unwrap();
     let end = NaiveDate::from_ymd_opt(2039, 9, 23).unwrap();
     let valuation_date = NaiveDate::from_ymd_opt(2022, 12, 31).unwrap();
-    let step = Months::new(3);
+    let step = IntervalPeriod::Months(3);
     let nominal = 400_000_000.0;
     let spread1 = 0.0006;
     let spread2 = 0.0;
@@ -41,11 +43,7 @@ fn main() {
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
 
     // Load spot rates
-
-    let path = "src/resources/curves";
-    let dir = format!("{}/jibar.txt", path);
-    let contents = std::fs::read_to_string(dir).unwrap();
-    let spot_rates: BTreeMap<NaiveDate, f64> = serde_json::from_str(&contents).unwrap();
+    let spot_rates: BTreeMap<NaiveDate, f64> = load_spot("jibar")?;
     let spot_rates: TermStructure<NaiveDate, f64> = spot_rates.into();
 
     // Date sequence.
@@ -58,10 +56,7 @@ fn main() {
     let interest_fractions = dcc.year_fraction(&seq_res, &seq_res[1..].to_vec());
 
     // Interest rate curve.
-    let path = "src/resources/curves";
-    let dir = format!("{}/zar_disc_csa.txt", path);
-    let contents = std::fs::read_to_string(dir).unwrap();
-    let curve: BTreeMap<u32, f64> = serde_json::from_str(&contents).unwrap();
+    let curve: BTreeMap<u32, f64> = load_curve("zar_disc_csa")?;
     let mut curve: TermStructure<f64> = curve.into();
     curve.map_x(|a| a / 365.0);
     let (x, y) = curve.unpack();
@@ -99,22 +94,8 @@ fn main() {
     const TERMINAL_WIDTH: usize = 200;
 
     // Print formatting.
-    let headings = &[
-        "Date",
-        "Interest fraction",
-        "Discount fraction",
-        "Discount factors",
-        "Interest rate1",
-        "Interest rate2",
-        "Leg1 interest",
-        "Leg2 interest",
-        "Leg1 PV",
-        "Leg2 PV",
-    ];
-
     table_print!(
         TERMINAL_WIDTH,
-        headings,
         seq_res[1..],
         interest_fractions,
         discount_fractions,
@@ -136,4 +117,6 @@ fn main() {
         (net_pv - CLIENT_VALUE) / net_pv * 100.0
     );
     println!("{}", "-".repeat(49));
+
+    Ok(())
 }

@@ -2,8 +2,8 @@ use chrono::NaiveDate;
 
 //  --- Enums
 
-#[derive(Clone, Debug)]
-pub enum Periods {
+#[derive(Clone, Copy, Debug)]
+pub enum IntervalPeriod {
     Days(u32),
     Weeks(u32),
     Months(u32),
@@ -12,40 +12,40 @@ pub enum Periods {
 
 //  --- Trait implementations: Concrete
 
-impl std::ops::Add<Periods> for NaiveDate {
+impl std::ops::Add<IntervalPeriod> for NaiveDate {
     type Output = NaiveDate;
 
-    fn add(self, rhs: Periods) -> Self::Output {
+    fn add(self, rhs: IntervalPeriod) -> Self::Output {
         match rhs {
-            Periods::Days(num) => self + chrono::Days::new(num as u64),
-            Periods::Weeks(num) => self + chrono::Days::new(num as u64 * 7),
-            Periods::Months(num) => self + chrono::Months::new(num),
-            Periods::Years(num) => self + chrono::Months::new(num * 12),
+            IntervalPeriod::Days(num) => self + chrono::Days::new(num as u64),
+            IntervalPeriod::Weeks(num) => self + chrono::Days::new(num as u64 * 7),
+            IntervalPeriod::Months(num) => self + chrono::Months::new(num),
+            IntervalPeriod::Years(num) => self + chrono::Months::new(num * 12),
         }
     }
 }
 
-impl std::ops::Sub<Periods> for NaiveDate {
+impl std::ops::Sub<IntervalPeriod> for NaiveDate {
     type Output = NaiveDate;
 
-    fn sub(self, rhs: Periods) -> Self::Output {
+    fn sub(self, rhs: IntervalPeriod) -> Self::Output {
         match rhs {
-            Periods::Days(num) => self - chrono::Days::new(num as u64),
-            Periods::Weeks(num) => self - chrono::Days::new(num as u64 * 7),
-            Periods::Months(num) => self - chrono::Months::new(num),
-            Periods::Years(num) => self - chrono::Months::new(num * 12),
+            IntervalPeriod::Days(num) => self - chrono::Days::new(num as u64),
+            IntervalPeriod::Weeks(num) => self - chrono::Days::new(num as u64 * 7),
+            IntervalPeriod::Months(num) => self - chrono::Months::new(num),
+            IntervalPeriod::Years(num) => self - chrono::Months::new(num * 12),
         }
     }
 }
 
-impl std::ops::AddAssign<Periods> for NaiveDate {
-    fn add_assign(&mut self, rhs: Periods) {
+impl std::ops::AddAssign<IntervalPeriod> for NaiveDate {
+    fn add_assign(&mut self, rhs: IntervalPeriod) {
         *self = *self + rhs
     }
 }
 
-impl std::ops::SubAssign<Periods> for NaiveDate {
-    fn sub_assign(&mut self, rhs: Periods) {
+impl std::ops::SubAssign<IntervalPeriod> for NaiveDate {
+    fn sub_assign(&mut self, rhs: IntervalPeriod) {
         *self = *self - rhs
     }
 }

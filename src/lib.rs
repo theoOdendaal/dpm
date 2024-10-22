@@ -46,6 +46,7 @@ pub mod math {
 
 pub mod resources {
     pub mod holidays;
+    pub mod market_data;
 }
 
 pub mod time {
