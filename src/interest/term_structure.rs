@@ -100,6 +100,7 @@ where
         }
     }
 
+    /// Construct new instance of self, from a sequence respresenting a sequence..
     pub fn new_as_interval<X>(seq: &[X]) -> Self
     where
         X: Into<A> + Into<B> + Clone,
