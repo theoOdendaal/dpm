@@ -100,6 +100,15 @@ where
         }
     }
 
+    pub fn new_as_interval<X>(seq: &[X]) -> Self
+    where
+        X: Into<A> + Into<B> + Clone,
+    {
+        let x = seq[..seq.len()].iter().cloned().map(Into::into).collect();
+        let y = seq[1..].iter().cloned().map(Into::into).collect();
+        Self { index: 0, x, y }
+    }
+
     /// Return 'key' field.
     pub fn get_x(&self) -> Vec<A> {
         self.x.to_vec()
