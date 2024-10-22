@@ -35,68 +35,7 @@ macro_rules! box_print {
         }
         formatted_output.push_str(&"-".repeat(max_line_size));
 
-
-
-
-
-        /*
-        formatted_output.push_str("\n");
-        formatted_output.push_str(&"-".repeat(max_size_output + ($width as f64 / 4.0)  as usize + 5));
-        formatted_output.push_str("\n");
-        for (a, b) in headings.iter().zip(output.iter()) {
-            formatted_output.push_str("| ");
-            formatted_output.push_str(a);
-            formatted_output.push_str(&" ".repeat(($width as f64 / 4.0) as usize - a.len()));
-            formatted_output.push_str("| ");
-            formatted_output.push_str(b);
-            formatted_output.push_str("\n");
-        }
-        formatted_output.push_str(&"-".repeat(max_size_output + ($width as f64 / 4.0)  as usize + 5));
-        */
-
         println!("{}", formatted_output);
 
     }};
 }
-
-/*
-#[macro_export]
-macro_rules! box_print {
-    ($width:expr, $($data:expr),+) => {{
-
-        let mut headings: Vec<&str> = Vec::new();
-        let mut output_size: Vec<usize> = Vec::new();
-        let mut output: Vec<&str> = Vec::new();
-        $(
-            let value = $data.to_string();
-            headings.push(stringify!($data));
-            output_size.push(value.len());
-            output.push(&value);
-        )+
-
-
-
-        let max_size_output = output_size.iter().max().unwrap();
-        let max_size_headings = headings.iter().map(|a| a.len()).max().unwrap();
-        let max_size = max_size_output.max(&max_size_headings);
-
-        let mut formatted_output = String::new();
-
-        formatted_output.push_str("\n");
-        formatted_output.push_str(&"-".repeat(max_size_output + ($width as f64 / 4.0)  as usize + 5));
-        formatted_output.push_str("\n");
-        for (a, b) in headings.iter().zip(output.iter()) {
-            formatted_output.push_str("| ");
-            formatted_output.push_str(a);
-            formatted_output.push_str(&" ".repeat(($width as f64 / 4.0) as usize - a.len()));
-            formatted_output.push_str("| ");
-            formatted_output.push_str(b);
-            formatted_output.push_str("\n");
-        }
-        formatted_output.push_str(&"-".repeat(max_size_output + ($width as f64 / 4.0)  as usize + 5));
-
-        println!("{}", formatted_output);
-
-    }};
-}
-*/

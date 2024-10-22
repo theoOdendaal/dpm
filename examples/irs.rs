@@ -108,12 +108,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         present_values2
     );
 
+    let absolute_diff = format!("{:.4}", net_pv - CLIENT_VALUE);
+    let relative_diff = (net_pv - CLIENT_VALUE) / net_pv * 100.0;
+
     box_print!(
         TERMINAL_WIDTH,
         net_pv,
         CLIENT_VALUE,
-        net_pv - CLIENT_VALUE,
-        (net_pv - CLIENT_VALUE) / net_pv * 100.0
+        absolute_diff,
+        relative_diff
     );
 
     Ok(())
