@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let seq_res = NaiveDate::seq(start, end, step);
     // FIXME Inception and termination date should not be adjusted.
     let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res, &public_holidays);
-    let seq_term: TermStructure<NaiveDate> = TermStructure::new_as_interval(&seq_res);
+    let seq_term: TermStructure<NaiveDate> = (&seq_res).into();
 
     // Discount and interest fractions.
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_term.get_y());

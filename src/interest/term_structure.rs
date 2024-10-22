@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 
 // TODO, refactor this module.
 // TODO try and remove all references to clone and copy.
+// TODO cleanup this module, as its becoming 'clunky'.
 
 //  --- Errors
 
@@ -169,5 +170,15 @@ where
             self.index = 0;
             None
         }
+    }
+}
+
+impl<A, X> From<&Vec<A>> for TermStructure<X>
+where
+    A: Into<X> + Clone,
+    X: PartialEq + Default + Copy,
+{
+    fn from(value: &Vec<A>) -> Self {
+        Self::new_as_interval(value)
     }
 }
