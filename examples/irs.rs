@@ -56,25 +56,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_term.y());
     let interest_fractions = dcc.year_fraction(&seq_term.x(), &seq_term.y());
 
-    // Interest rate curve.
-    let curve: BTreeMap<u32, f64> = load_curve("zar_disc_csa")?;
-    let mut curve: Term<f64> = curve.into();
-    curve.map_x(|a| a / 365.0);
-    let (x, y) = curve.unpack();
+    // Discount curve.
+    let discount_curve: BTreeMap<u32, f64> = load_curve("zar_disc_csa_irs")?;
+    let mut discount_curve: Term<f64> = discount_curve.into();
+    discount_curve.map_x(|a| a / 365.0);
+    let (df_x, df_y) = discount_curve.unpack();
 
-    // Discount factors.
-    let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
+    // Forward rate curve.
+    let forward_curve: BTreeMap<u32, f64> = load_curve("zar_swap_irs")?;
+    let mut forward_curve: Term<f64> = forward_curve.into();
+    forward_curve.map_x(|a| a / 365.0);
+    let (f_x, f_y) = forward_curve.unpack();
+
+    // Discount and forward rate factors.
+    let discount_factors = interpolation_method.interpolate(&df_x, &df_y, &discount_fractions);
+    let forward_factors = interpolation_method.interpolate(&f_x, &f_y, &discount_fractions);
 
     // Interest rates.
-    let discount_factors_term = Term::new(&discount_fractions, &discount_factors);
-    let forward_rates = discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
+    let forward_factors_term = Term::new(&discount_fractions, &forward_factors);
+    let forward_rates = discount_to_forward_vec(&interest_rate_convention, &forward_factors_term);
     let mut forward_rate_term = Term::with_padding(&seq_term.x(), &forward_rates);
     forward_rate_term = forward_rate_term.left_join(spot_rates);
     let forward_rates1 = forward_rate_term.clone().shift_y(spread1).y();
     let forward_rates2 = forward_rate_term.clone().shift_y(spread2).y();
 
-    assert_eq!(discount_factors.len(), forward_rates1.len());
-    assert_eq!(discount_factors.len(), forward_rates2.len());
+    assert_eq!(forward_factors.len(), forward_rates1.len());
+    assert_eq!(forward_factors.len(), forward_rates2.len());
 
     // Cash flow operations.
     let interest_rate_fractions1 =
