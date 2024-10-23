@@ -9,4 +9,7 @@
 // 3.
 // All functions should take Vec<f64> as self.
 
-fn main() {}
+fn main() {
+    let x = vec![1, 2, 3, 4, 5];
+    let y = vec![1, 2, 3, 4, 5];
+}

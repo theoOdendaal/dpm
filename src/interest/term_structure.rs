@@ -1,34 +1,98 @@
 use std::collections::BTreeMap;
 
-/*
-    use chrono::NaiveDate;
-    use dpm::core::curves::{Curve, CurveParameters};
-
-    let x = vec!["2023-12-31", "2023-12-31"];
-    let y = vec![0.06, 0.07];
-    let curve = CurveParameters::new(&x, &y);
-    if let Ok(trans_res) = curve.try_map_x(|a| NaiveDate::parse_from_str(a, "%Y-%m-%d")) {
-        let curve = CurveParameters::new(&trans_res, &y);
-
-        println!("{:?}", curve);
-    }
-
-*/
-
 // TODO, refactor this module.
 // TODO try and remove all references to clone and copy.
-// TODO cleanup this module, as its becoming 'clunky'.
-
-//  --- Errors
-
+// TODO update name of Term.
 #[derive(Clone)]
-pub struct TermStructure<A, B = A> {
-    index: usize,
-    x: Vec<A>,
-    y: Vec<B>,
+pub struct Term<A, B = A>(Vec<A>, Vec<B>);
+
+// TODO add proper documentation.
+pub trait TermStructure<X, Y = X>: Iterator<Item = (X, Y)>
+where
+    Self: Sized,
+    X: Copy + Default + PartialEq,
+    Y: Copy + Default + PartialEq,
+{
+    /// Construct new instance of Self.
+    fn new(x: &[X], y: &[Y]) -> Self;
+
+    /// Construct new instance of Self,
+    /// ensuring 'x' and 'y' are of equal length
+    /// through the use of padding.
+    fn with_padding(x: &[X], y: &[Y]) -> Self;
+
+    /// Return 'x' value associated with Self.
+    fn x(&self) -> Vec<X>;
+
+    /// Return 'y' value associated with Self.
+    fn y(&self) -> Vec<Y>;
+
+    /// Update 'x' value using a closure.
+    fn map_x<A>(&mut self, closure: A) -> &mut Self
+    where
+        A: Fn(&X) -> X;
+
+    /// Update 'x' value using a closure.
+    fn map_y<B>(&mut self, closure: B) -> &mut Self
+    where
+        B: Fn(&Y) -> Y;
+
+    /// Return 'x' and 'y' as a tuple.
+    fn unpack(&self) -> (Vec<X>, Vec<Y>) {
+        (self.x(), self.y())
+    }
+
+    /// Increment each non-default 'y' element with a constant size.
+    fn shift_y<C>(&mut self, size: C) -> &mut Self
+    where
+        C: Copy,
+        Y: std::ops::Add<C, Output = Y>,
+    {
+        self.map_y(|a| if a != &Y::default() { *a + size } else { *a })
+    }
+
+    /// Update 'y' values of 'self' with 'other'.
+    fn left_join(&mut self, other: Self) -> Self;
 }
 
-impl<A, B, C, D> From<BTreeMap<A, B>> for TermStructure<C, D>
+impl<X, Y> Iterator for Term<X, Y> {
+    type Item = (X, Y);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.is_empty() || self.1.is_empty() {
+            None
+        } else {
+            Some((self.0.remove(0), self.1.remove(0)))
+        }
+    }
+}
+
+impl<X> From<Vec<X>> for Term<X>
+where
+    X: Copy + Default + PartialEq,
+    Term<X>: TermStructure<X>,
+{
+    fn from(value: Vec<X>) -> Self {
+        let x = value[..value.len() - 1].to_vec();
+        let y = value[1..].to_vec();
+        Self::new(&x, &y)
+    }
+}
+
+impl<X> From<Term<X>> for Vec<X>
+where
+    X: Copy + Default + PartialEq,
+    Term<X>: TermStructure<X>,
+{
+    fn from(value: Term<X>) -> Self {
+        let mut x = value.x();
+        let y = value.y();
+        x.push(y[y.len() - 1]);
+        x
+    }
+}
+
+impl<A, B, C, D> From<BTreeMap<A, B>> for Term<C, D>
 where
     A: Copy + Into<C>,
     B: Copy + Into<D>,
@@ -36,149 +100,67 @@ where
     fn from(value: BTreeMap<A, B>) -> Self {
         let x = value.keys().copied().map(Into::into).collect();
         let y = value.values().copied().map(Into::into).collect();
-        Self { index: 0, x, y }
+        Self(x, y)
     }
 }
 
-impl<A: PartialEq, B: Copy> TermStructure<A, B> {
-    pub fn update_with(&mut self, other: Self) {
-        for (i, x_val_self) in self.x.iter().enumerate() {
-            if let Some(pos) = other
-                .x
-                .iter()
-                .position(|x_val_other| x_val_self == x_val_other)
-            {
-                self.y[i] = other.y[pos];
-            }
-        }
-    }
-}
-
-impl<A, B> TermStructure<A, B>
+impl<X, Y> TermStructure<X, Y> for Term<X, Y>
 where
-    A: Copy + Default,
-    B: Copy + Default + PartialEq,
+    X: Copy + Default + PartialEq,
+    Y: Copy + Default + PartialEq,
 {
-    pub fn new(x: &[A], y: &[B]) -> Self {
-        Self {
-            index: 0,
-            x: x.to_vec(),
-            y: y.to_vec(),
-        }
+    fn new(x: &[X], y: &[Y]) -> Self {
+        assert_eq!(x.len(), y.len());
+        Self(x.to_vec(), y.to_vec())
     }
 
-    pub fn new_from_map_x<F, C>(&self, closure: F) -> TermStructure<C, B>
-    where
-        F: Fn(&A) -> C,
-    {
-        let x = self.get_x().iter().map(closure).collect::<Vec<C>>();
-        let y = self.get_y();
-        TermStructure { index: 0, x, y }
-    }
-
-    pub fn new_from_map_y<F, C>(&self, closure: F) -> TermStructure<A, C>
-    where
-        F: Fn(&B) -> C,
-    {
-        let x = self.get_x();
-        let y = self.get_y().iter().map(closure).collect::<Vec<C>>();
-        TermStructure { index: 0, x, y }
-    }
-
-    /// Construct new instance of self, padding the smaller array with defaults.
-    pub fn new_with_default_pad(x: &[A], y: &[B]) -> Self {
+    fn with_padding(x: &[X], y: &[Y]) -> Self {
         let x_len = x.len();
         let y_len = y.len();
-        let mut x_padded = vec![A::default(); x_len.max(y_len) - x_len];
-        let mut y_padded = vec![B::default(); x_len.max(y_len) - y_len];
+        let mut x_padded = vec![X::default(); x_len.max(y_len) - x_len];
+        let mut y_padded = vec![Y::default(); x_len.max(y_len) - y_len];
 
         x_padded.extend(x.to_vec());
         y_padded.extend(y.to_vec());
-        Self {
-            index: 0,
-            x: x_padded,
-            y: y_padded,
-        }
+        Self(x_padded, y_padded)
     }
 
-    /// Construct new instance of self, from a sequence respresenting a sequence..
-    pub fn new_as_interval<X>(seq: &[X]) -> Self
+    fn x(&self) -> Vec<X> {
+        self.0.to_vec()
+    }
+
+    fn y(&self) -> Vec<Y> {
+        self.1.to_vec()
+    }
+
+    fn map_x<A>(&mut self, closure: A) -> &mut Self
     where
-        X: Into<A> + Into<B> + Clone,
+        A: Fn(&X) -> X,
     {
-        let x = seq[..seq.len()].iter().cloned().map(Into::into).collect();
-        let y = seq[1..].iter().cloned().map(Into::into).collect();
-        Self { index: 0, x, y }
-    }
-
-    /// Return 'key' field.
-    pub fn get_x(&self) -> Vec<A> {
-        self.x.to_vec()
-    }
-
-    /// Return 'value' field
-    pub fn get_y(&self) -> Vec<B> {
-        self.y.to_vec()
-    }
-
-    /// Returns a tuple containing the 'key' and 'value' field.
-    pub fn unpack(&self) -> (Vec<A>, Vec<B>) {
-        (self.get_x(), self.get_y())
-    }
-
-    /// Map 'key' field using a closure.
-    pub fn map_x<F>(&mut self, closure: F) -> &mut Self
-    where
-        F: Fn(&A) -> A,
-    {
-        self.x = self.get_x().iter().map(closure).collect::<Vec<A>>();
+        self.0 = self.0.iter().map(closure).collect();
         self
     }
 
-    /// Map 'value' field using a closure.
-    pub fn map_y<F>(&mut self, closure: F) -> &mut Self
+    fn map_y<B>(&mut self, closure: B) -> &mut Self
     where
-        F: Fn(&B) -> B,
+        B: Fn(&Y) -> Y,
     {
-        self.y = self.get_y().iter().map(closure).collect::<Vec<B>>();
+        self.1 = self.1.iter().map(closure).collect();
         self
     }
 
-    /// Shift each non-default value with a given size.
-    pub fn shift<S>(&mut self, size: S) -> &mut Self
-    where
-        B: std::ops::Add<S, Output = B>,
-        S: Copy,
-    {
-        self.map_y(|a| if a != &B::default() { *a + size } else { *a })
-    }
-}
-
-impl<A, B> Iterator for TermStructure<A, B>
-where
-    A: Copy,
-    B: Copy,
-{
-    type Item = (A, B);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.x.len() && self.index < self.y.len() {
-            let item = (self.x[self.index], self.y[self.index]);
-            self.index += 1;
-            Some(item)
-        } else {
-            self.index = 0;
-            None
+    fn left_join(&mut self, other: Self) -> Self {
+        let x = self.x();
+        let mut y = self.y();
+        for (i, x_val_self) in x.iter().enumerate() {
+            if let Some(pos) = other
+                .x()
+                .into_iter()
+                .position(|x_val_other| *x_val_self == x_val_other)
+            {
+                y[i] = other.y()[pos];
+            }
         }
-    }
-}
-
-impl<A, X> From<&Vec<A>> for TermStructure<X>
-where
-    A: Into<X> + Clone,
-    X: PartialEq + Default + Copy,
-{
-    fn from(value: &Vec<A>) -> Self {
-        Self::new_as_interval(value)
+        Self::new(&x, &y)
     }
 }

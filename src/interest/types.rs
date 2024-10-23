@@ -59,7 +59,7 @@
 
 // The purpose of module is not to convert individual rates, but rather a curve.
 use super::ops::{InterestConventions, TimeValueOfMoney};
-use super::term_structure::TermStructure;
+use super::term_structure::{Term, TermStructure};
 
 //  --- Errors
 
@@ -91,10 +91,7 @@ struct ForwardRate<A>(InterestConventions, A);
 
 //  --- Standalone functions
 
-pub fn discount_to_forward_vec(
-    convention: &InterestConventions,
-    curve: &TermStructure<f64>,
-) -> Vec<f64> {
+pub fn discount_to_forward_vec(convention: &InterestConventions, curve: &Term<f64>) -> Vec<f64> {
     curve
         .clone()
         .zip(curve.clone().skip(1))

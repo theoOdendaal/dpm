@@ -7,7 +7,7 @@ use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
-use dpm::interest::term_structure::TermStructure;
+use dpm::interest::term_structure::{Term, TermStructure};
 use dpm::interest::types::discount_to_forward_vec;
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
@@ -44,21 +44,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load spot rates
     let spot_rates: BTreeMap<NaiveDate, f64> = load_spot("jibar")?;
-    let spot_rates: TermStructure<NaiveDate, f64> = spot_rates.into();
+    let spot_rates: Term<NaiveDate, f64> = spot_rates.into();
 
     // Date sequence.
     let seq_res = NaiveDate::seq(start, end, step);
     // FIXME Inception and termination date should not be adjusted.
     let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res, &public_holidays);
-    let seq_term: TermStructure<NaiveDate> = (&seq_res).into();
+    let seq_term: Term<NaiveDate> = seq_res.clone().into();
 
     // Discount and interest fractions.
-    let discount_fractions = dcc.year_fraction(&valuation_date, &seq_term.get_y());
-    let interest_fractions = dcc.year_fraction(&seq_res, &seq_term.get_y());
+    let discount_fractions = dcc.year_fraction(&valuation_date, &seq_term.y());
+    let interest_fractions = dcc.year_fraction(&seq_res, &seq_term.y());
 
     // Interest rate curve.
     let curve: BTreeMap<u32, f64> = load_curve("zar_disc_csa")?;
-    let mut curve: TermStructure<f64> = curve.into();
+    let mut curve: Term<f64> = curve.into();
     curve.map_x(|a| a / 365.0);
     let (x, y) = curve.unpack();
 
@@ -68,11 +68,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Interest rates.
     let discount_factors_term = TermStructure::new(&discount_fractions, &discount_factors);
     let forward_rates = discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
-    let mut forward_rate_term =
-        TermStructure::new_with_default_pad(&seq_term.get_y(), &forward_rates);
-    forward_rate_term.update_with(spot_rates);
-    let forward_rates1 = forward_rate_term.clone().shift(spread1).get_y();
-    let forward_rates2 = forward_rate_term.clone().shift(spread2).get_y();
+    let mut forward_rate_term = Term::with_padding(&seq_term.y(), &forward_rates);
+    forward_rate_term.left_join(spot_rates);
+    let forward_rates1 = forward_rate_term.clone().shift_y(spread1).y();
+    let forward_rates2 = forward_rate_term.clone().shift_y(spread2).y();
 
     assert_eq!(discount_factors.len(), forward_rates1.len());
     assert_eq!(discount_factors.len(), forward_rates2.len());
@@ -98,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Print formatting.
     table_print!(
         TERMINAL_WIDTH,
-        seq_term.get_y(),
+        seq_term.y(),
         interest_fractions,
         discount_fractions,
         discount_factors,

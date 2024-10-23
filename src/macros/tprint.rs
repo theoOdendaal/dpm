@@ -1,4 +1,4 @@
-// FIXME refactor this macro to make it more concise.
+// TODO refactor this macro to make it more concise.
 
 #[macro_export]
 macro_rules! table_print {
