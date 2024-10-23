@@ -50,11 +50,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let seq_res = NaiveDate::seq(start, end, step);
     // FIXME Inception and termination date should not be adjusted.
     let seq_res: Vec<NaiveDate> = bdc.business_day(&seq_res, &public_holidays);
-    let seq_term: Term<NaiveDate> = seq_res.clone().into();
+    let seq_term: Term<NaiveDate> = (&seq_res).into();
 
     // Discount and interest fractions.
     let discount_fractions = dcc.year_fraction(&valuation_date, &seq_term.y());
-    let interest_fractions = dcc.year_fraction(&seq_res, &seq_term.y());
+    let interest_fractions = dcc.year_fraction(&seq_term.x(), &seq_term.y());
 
     // Interest rate curve.
     let curve: BTreeMap<u32, f64> = load_curve("zar_disc_csa")?;
@@ -66,10 +66,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let discount_factors = interpolation_method.interpolate(&x, &y, &discount_fractions);
 
     // Interest rates.
-    let discount_factors_term = TermStructure::new(&discount_fractions, &discount_factors);
+    let discount_factors_term = Term::new(&discount_fractions, &discount_factors);
     let forward_rates = discount_to_forward_vec(&interest_rate_convention, &discount_factors_term);
-    let mut forward_rate_term = Term::with_padding(&seq_term.y(), &forward_rates);
-    forward_rate_term.left_join(spot_rates);
+    let mut forward_rate_term = Term::with_padding(&seq_term.x(), &forward_rates);
+    forward_rate_term = forward_rate_term.left_join(spot_rates);
     let forward_rates1 = forward_rate_term.clone().shift_y(spread1).y();
     let forward_rates2 = forward_rate_term.clone().shift_y(spread2).y();
 

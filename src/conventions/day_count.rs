@@ -86,7 +86,7 @@ impl DayCount<NaiveDate, NaiveDate, f64> for DayCountConventions {
     }
 
     fn year_fraction(&self, start: &NaiveDate, end: &NaiveDate) -> f64 {
-        let mut value = match self {
+        match self {
             Self::Thirty360Bond => Thirty360Bond.year_fraction(start, end),
             Self::ThirtyE360 => ThirtyE360.year_fraction(start, end),
             Self::ThirtyE360ISDA => unimplemented!(),
@@ -95,9 +95,7 @@ impl DayCount<NaiveDate, NaiveDate, f64> for DayCountConventions {
             Self::Actual365Fixed => Actual365Fixed.year_fraction(start, end),
             Self::Actual365Actual => unimplemented!(),
             Self::NonLeap365 => unimplemented!(),
-        };
-        value = value.max(0.0);
-        value
+        }
     }
 }
 

@@ -1,15 +1,26 @@
-use std::collections::BTreeMap;
+use core::fmt;
+use std::{collections::BTreeMap, fmt::Display};
 
 // TODO, refactor this module.
 // TODO try and remove all references to clone and copy.
 // TODO update name of Term.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Term<A, B = A>(Vec<A>, Vec<B>);
+
+impl<A: Display, B: Display> Display for Term<A, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Term(x, y) = self;
+        for (xi, yi) in x.iter().zip(y.iter()) {
+            writeln!(f, "({}, {})", xi, yi)?;
+        }
+        Ok(())
+    }
+}
 
 // TODO add proper documentation.
 pub trait TermStructure<X, Y = X>: Iterator<Item = (X, Y)>
 where
-    Self: Sized,
+    //Self: Sized,
     X: Copy + Default + PartialEq,
     Y: Copy + Default + PartialEq,
 {
@@ -67,12 +78,12 @@ impl<X, Y> Iterator for Term<X, Y> {
     }
 }
 
-impl<X> From<Vec<X>> for Term<X>
+impl<X> From<&Vec<X>> for Term<X>
 where
     X: Copy + Default + PartialEq,
     Term<X>: TermStructure<X>,
 {
-    fn from(value: Vec<X>) -> Self {
+    fn from(value: &Vec<X>) -> Self {
         let x = value[..value.len() - 1].to_vec();
         let y = value[1..].to_vec();
         Self::new(&x, &y)
@@ -158,6 +169,7 @@ where
                 .into_iter()
                 .position(|x_val_other| *x_val_self == x_val_other)
             {
+                println!("{:?}", &i);
                 y[i] = other.y()[pos];
             }
         }
