@@ -1,3 +1,6 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 use core::fmt;
 use std::{collections::BTreeMap, fmt::Display};
 

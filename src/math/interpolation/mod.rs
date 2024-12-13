@@ -1,3 +1,6 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 // TODO if xp = 0, return 1.0.
 // TODO complete this module.
 // TODO implement unit tests.

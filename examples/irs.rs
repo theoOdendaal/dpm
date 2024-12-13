@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let interest_rate_convention = InterestConventions::Simple;
 
     // Load holidays.
-    let country_code: String = CountryTwoCode::from_str(country).unwrap().into();
+    let country_code: String = CountryTwoCode::from_str(country)?.into();
     let public_holidays = holidays::load_holidays(&country_code).unwrap();
 
     // Load spot rates

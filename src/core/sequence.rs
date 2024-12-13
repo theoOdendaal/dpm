@@ -1,4 +1,9 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 //! Sequence creation.
+
+// TODO amend so the payment month and day can be specified !!!
 
 //  --- Traits
 
