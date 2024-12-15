@@ -19,6 +19,7 @@ pub mod conventions {
 }
 
 pub mod core {
+    pub mod contract;
     pub mod sequence;
 }
 

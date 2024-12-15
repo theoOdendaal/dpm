@@ -9,4 +9,6 @@
 // 3.
 // All functions should take Vec<f64> as self.
 
+// FIXME How to handle multiple compounding frequencies within a single payment interval?
+
 fn main() {}

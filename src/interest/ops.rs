@@ -84,7 +84,7 @@ pub trait TimeValueOfMoney<A, B = A, C = A, D = A> {
     /// Infers the interest rate.
     fn rate(&self, n: &A, pv: &B) -> C;
 
-    // FIXME, not certain I really like this implementation? Maybe change argument names?
+    /// Element wise multiplication.
     fn prod(&self, value: &A, other: &B) -> C;
 }
 

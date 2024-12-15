@@ -8,7 +8,7 @@ use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{Term, TermStructure};
-use dpm::interest::types::discount_to_forward_vec;
+use dpm::interest::types::discount_to_forward;
 use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load holidays.
     let country_code: String = CountryTwoCode::from_str(country)?.into();
-    let public_holidays = holidays::load_holidays(&country_code).unwrap();
+    let public_holidays = holidays::load_holidays(&country_code)?;
 
     // Load spot rates
     let spot_rates: BTreeMap<NaiveDate, f64> = load_spot("jibar")?;
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Interest rates.
     let forward_factors_term = Term::new(&discount_fractions, &forward_factors);
-    let forward_rates = discount_to_forward_vec(&interest_rate_convention, &forward_factors_term);
+    let forward_rates = discount_to_forward(&interest_rate_convention, &forward_factors_term);
     let mut forward_rate_term = Term::with_padding(&seq_term.x(), &forward_rates);
     forward_rate_term = forward_rate_term.left_join(spot_rates);
     let forward_rates1 = forward_rate_term.clone().shift_y(spread1).y();

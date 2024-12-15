@@ -77,21 +77,16 @@ pub enum RateTypes {
     Par(InterestConventions),
 }
 
-//  --- Structs
-
-#[derive(Clone)]
-struct SwapRate<A>(InterestConventions, A);
-#[derive(Clone)]
-struct DiscountRate<A>(A);
-#[derive(Clone)]
-struct SpotRate<A>(InterestConventions, A);
-#[derive(Clone)]
-struct ForwardRate<A>(InterestConventions, A);
-//struct Par<A>(InterestConventions, A);
-
 //  --- Standalone functions
 
-pub fn discount_to_forward_vec(convention: &InterestConventions, curve: &Term<f64>) -> Vec<f64> {
+pub fn discount_to_spot(convention: &InterestConventions, curve: &Term<f64>) -> Vec<f64> {
+    curve
+        .clone()
+        .map(|(x, y)| convention.rate(&x, &y))
+        .collect()
+}
+
+pub fn discount_to_forward(convention: &InterestConventions, curve: &Term<f64>) -> Vec<f64> {
     curve
         .clone()
         .zip(curve.clone().skip(1))
@@ -143,20 +138,11 @@ pub fn swap_to_spot(
 // fn discount_to_par
 
 // Where Point = (n, df).
+/*
 fn discount_to_spot(convention: &InterestConventions, point: &Point) -> f64 {
     convention.rate(&point.0, &point.1)
 }
-
-// Where Point = (n, df).
-pub fn discount_to_forward(
-    convention: &InterestConventions,
-    short_point: &Point,
-    long_point: &Point,
-) -> f64 {
-    let (short_n, short_df) = short_point;
-    let (long_n, long_df) = long_point;
-    convention.rate(&(long_n - short_n), &(long_df / short_df))
-}
+    */
 
 //  --- Spot rate conversions ---
 // fn spot_to_swap
