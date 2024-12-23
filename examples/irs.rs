@@ -6,10 +6,10 @@ use chrono::NaiveDate;
 use dpm::conventions::business_day::{BusinessDay, BusinessDayConventions};
 use dpm::conventions::day_count::{DayCount, DayCountConventions};
 use dpm::core::sequence::Sequence;
+use dpm::country::CountryTwoCode;
 use dpm::interest::ops::{InterestConventions, TimeValueOfMoney};
 use dpm::interest::term_structure::{Term, TermStructure};
 use dpm::interest::types::discount_to_forward;
-use dpm::iso::iso3166::CountryTwoCode;
 use dpm::math::interpolation::{Interpolate, InterpolationMethod};
 use dpm::resources::holidays;
 

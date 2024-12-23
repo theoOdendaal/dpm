@@ -28,9 +28,7 @@ pub mod interest {
     pub mod types;
 }
 
-pub mod iso {
-    pub mod iso3166;
-}
+pub mod country;
 
 pub mod macros {
     pub mod approx;
