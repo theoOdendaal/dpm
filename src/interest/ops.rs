@@ -6,7 +6,6 @@
 // TODO improve error handling.
 // TODO add more unit tests.
 // TODO add unit tests for vec's. Specifically for the pv tests.
-// TODO try and remove all references to clone and copy.
 
 // FIXME, double check logic.
 

@@ -36,9 +36,10 @@
 use chrono::NaiveDate;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs;
+use serde::{Deserialize, Serialize};
+use serde_json::to_string_pretty;
+use std::collections::{HashMap, HashSet};
+use std::fs::{self, read_to_string};
 use std::io::Write;
 use std::{fmt::Debug, fs::File};
 
@@ -47,6 +48,7 @@ use std::{fmt::Debug, fs::File};
 // TODO don't fetch when data is already downloaded? Create a config that json which stores search paramters?
 // TODO improve Error enum.
 // TODO Refactor to make it more concise.
+// TODO this module should work directly with the iso3166 module, and accept enums for CountryCode's, and integers for years.
 
 //  --- Constants ---
 const BASE_URL: &str = "https://date.nager.at/api/v3";
@@ -258,4 +260,44 @@ pub fn load_holidays(country_code: &str) -> Result<Vec<NaiveDate>> {
     let contents = fs::read_to_string(path)?;
     let json_text: Vec<NaiveDate> = serde_json::from_str(&contents)?;
     Ok(json_text)
+}
+
+//  --- Cache management ---
+#[derive(Default, Deserialize, Debug, Serialize)]
+pub struct CountryCache(HashMap<String, HashSet<String>>);
+
+impl CountryCache {
+    pub fn new() -> Self {
+        let path = format!("{}/config.json", RESOURCE_DIR);
+        if let Ok(contents) = fs::read_to_string(path) {
+            if let Ok(json_text) = serde_json::from_str::<Self>(&contents) {
+                return json_text;
+            }
+        }
+        Self::default()
+    }
+
+    pub fn update(&mut self, country_code: &str, year: &str) {
+        let country_years = self.0.entry(country_code.to_string()).or_default();
+        country_years.insert(year.to_string());
+    }
+
+    // Updates the CountryCace based on the actual data downloaded.
+    //pub fn update_from_cache(&mut self)
+
+    pub fn is_saved(self, country_code: &str, year: &str) -> bool {
+        if let Some(years) = self.0.get(country_code) {
+            years.contains(&year.to_string())
+        } else {
+            false
+        }
+    }
+
+    pub fn write(&self) -> Result<()> {
+        let path = format!("{}/config.json", RESOURCE_DIR);
+        let json_string = to_string_pretty(&self)?;
+        let mut file = File::create(path)?;
+        file.write_all(json_string.as_bytes())?;
+        Ok(())
+    }
 }

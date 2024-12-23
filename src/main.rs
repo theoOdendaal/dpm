@@ -11,4 +11,12 @@
 
 // FIXME How to handle multiple compounding frequencies within a single payment interval?
 
-fn main() {}
+use dpm::resources::holidays::CountryCache;
+
+fn main() {
+    let country_cache = CountryCache::new();
+    println!("{:?}", country_cache);
+
+    //let res = CountryCache::load_config().unwrap();
+    //println!("{:?}", res.is_saved("ZA", "2023"));
+}

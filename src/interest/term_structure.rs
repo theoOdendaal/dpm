@@ -172,7 +172,6 @@ where
                 .into_iter()
                 .position(|x_val_other| *x_val_self == x_val_other)
             {
-                println!("{:?}", &i);
                 y[i] = other.y()[pos];
             }
         }
