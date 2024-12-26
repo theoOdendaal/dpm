@@ -23,7 +23,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum CountryTwoCode {
     AF,
     AL,
@@ -227,7 +227,7 @@ pub enum CountryTwoCode {
     ZW,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum CountryThreeCode {
     AFG,
     ALB,
